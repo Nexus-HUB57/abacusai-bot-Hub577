@@ -15,7 +15,8 @@ export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Sync user profile on first load using non-blocking merge to avoid update errors
+  // Sync user profile on first load using non-blocking set with merge
+  // This avoids Permission Denied if the doc doesn't exist and we use updateDoc
   useEffect(() => {
     if (user && db) {
       const userRef = doc(db, 'users', user.uid);
