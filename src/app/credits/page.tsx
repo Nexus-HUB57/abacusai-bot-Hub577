@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CreditsPage() {
@@ -28,7 +28,8 @@ export default function CreditsPage() {
     if (!user || !db) return null;
     return query(
       collection(db, 'users', user.uid, 'creditHistory'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
   }, [db, user]);
 
