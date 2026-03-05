@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarNav } from '@/components/layout/sidebar-nav';
@@ -19,7 +20,7 @@ export default function BindsPage() {
     return query(
       collection(db, 'users', user.uid, 'bindCodes'),
       orderBy('createdAt', 'desc'),
-      limit(20) // Restricted for quota management
+      limit(10) // Restricted to 10 to save read quota
     );
   }, [db, user]);
 
@@ -42,7 +43,7 @@ export default function BindsPage() {
               <Key className="w-5 h-5 text-accent" />
               Registros Ativos
             </CardTitle>
-            <CardDescription className="font-body">Acompanhamento detalhado do status e créditos individuais (Top 20).</CardDescription>
+            <CardDescription className="font-body">Acompanhamento detalhado do status e créditos individuais (Top 10).</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

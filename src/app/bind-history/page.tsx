@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarNav } from '@/components/layout/sidebar-nav';
@@ -18,7 +19,7 @@ export default function BindHistoryPage() {
     return query(
       collection(db, 'users', user.uid, 'bindHistory'),
       orderBy('createdAt', 'desc'),
-      limit(20) // Highly restricted to save quota
+      limit(10) // Restricted to 10 to save read quota
     );
   }, [db, user]);
 
@@ -41,7 +42,7 @@ export default function BindHistoryPage() {
               <History className="w-5 h-5 text-accent" />
               Stream de Eventos
             </CardTitle>
-            <CardDescription className="font-body">Monitorando interações em tempo real no Nexus (Top 20).</CardDescription>
+            <CardDescription className="font-body">Monitorando interações em tempo real no Nexus (Top 10).</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

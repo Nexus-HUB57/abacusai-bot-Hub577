@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -31,7 +32,7 @@ export default function NucleusMonitoringPage() {
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(10)); // Restricted to 10
   }, [db, user]);
 
   const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
@@ -174,7 +175,7 @@ export default function NucleusMonitoringPage() {
               <Activity className="w-5 h-5 text-accent" />
               Entidades de Rede
             </CardTitle>
-            <CardDescription className="font-body">Monitoramento de pulsação para nós registrados (Top 20).</CardDescription>
+            <CardDescription className="font-body">Monitoramento de pulsação para nós registrados (Top 10).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

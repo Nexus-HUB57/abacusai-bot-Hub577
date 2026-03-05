@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
+    // Sincroniza apenas uma vez por montagem do componente se os dados básicos estiverem prontos
     if (user && db && userProfile && !syncAttemptedRef.current) {
       const sessionKey = `nexus_synced_${user.uid}`;
       const alreadySynced = sessionStorage.getItem(sessionKey);
@@ -39,6 +41,7 @@ export default function Dashboard() {
       const oneDayInMs = 24 * 60 * 60 * 1000;
       const needsRefresh = now.getTime() - lastRefresh.getTime() >= oneDayInMs;
 
+      // Só atualiza se for necessário (mais de 24h ou falta de dados)
       if (needsRefresh || userProfile.monthlyCredits === undefined) {
         syncAttemptedRef.current = true;
         sessionStorage.setItem(sessionKey, 'true');
@@ -53,7 +56,7 @@ export default function Dashboard() {
         }, { merge: true });
       }
     }
-  }, [user, db, userProfile]);
+  }, [user, db, !!userProfile]); // Depende apenas da existência do perfil, não de todo o objeto para evitar loops
 
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;

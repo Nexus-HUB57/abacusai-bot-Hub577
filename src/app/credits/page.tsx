@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from 'react';
@@ -31,7 +32,7 @@ export default function CreditsPage() {
     return query(
       collection(db, 'users', user.uid, 'creditHistory'),
       orderBy('createdAt', 'desc'),
-      limit(20)
+      limit(10) // Restricted to 10
     );
   }, [db, user]);
 
@@ -120,8 +121,7 @@ export default function CreditsPage() {
             <CardContent>
               <p className="text-xs text-muted-foreground font-body">Cota Diária Nexus</p>
             </CardContent>
-          </Card>
-        </div>
+          </div>
 
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
@@ -129,7 +129,7 @@ export default function CreditsPage() {
               <CreditCard className="w-5 h-5 text-accent" />
               Log de Auditoria
             </CardTitle>
-            <CardDescription className="font-body">Histórico de operações que impactaram o seu suprimento.</CardDescription>
+            <CardDescription className="font-body">Histórico de operações que impactaram o seu suprimento (Top 10).</CardDescription>
           </CardHeader>
           <CardContent>
             {historyLoading ? (
