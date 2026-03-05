@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,7 +13,7 @@ import { Button } from '@/components/ui/button';
 /**
  * Ouvinte centralizado de erros do Firebase.
  * Detecta especificamente o erro de 'resource-exhausted' (Quota Exceeded)
- * e apresenta uma interface de bloqueio total para o usuário.
+ * e apresenta uma interface de bloqueio total para o usuário em português.
  */
 export function FirebaseErrorListener() {
   const { toast } = useToast();

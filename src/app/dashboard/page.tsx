@@ -56,17 +56,17 @@ export default function Dashboard() {
         }, { merge: true });
       }
     }
-  }, [user, db, !!userProfile]); // Depende apenas da existência do perfil, não de todo o objeto para evitar loops
+  }, [user, db, !!userProfile]); 
 
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), orderBy('createdAt', 'desc'), limit(3));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), orderBy('createdAt', 'desc'), limit(5));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(3));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(5));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -93,14 +93,9 @@ export default function Dashboard() {
   const stats = [
     { label: 'Binds Ativos', value: binds?.length || 0, icon: Key, color: 'text-accent' },
     { label: 'Núcleos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Sync Status', value: statsStatus(nuclei), icon: Zap, color: 'text-yellow-500' },
+    { label: 'Sync Status', value: nuclei?.filter((item: any) => item.status === 'online' || item.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
     { label: 'Saldo Diário', value: Math.max(0, availableCredits), icon: Wallet, color: 'text-green-500' },
   ];
-
-  function statsStatus(n: any) {
-    if (!n) return 0;
-    return n.filter((item: any) => item.status === 'online' || item.status === 'syncing').length;
-  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

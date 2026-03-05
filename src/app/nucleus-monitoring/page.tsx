@@ -16,8 +16,7 @@ import {
   Database, 
   AlertCircle,
   Clock,
-  RefreshCw,
-  Cpu
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
@@ -32,7 +31,7 @@ export default function NucleusMonitoringPage() {
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(10)); // Restricted to 10
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(10)); 
   }, [db, user]);
 
   const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
@@ -59,7 +58,6 @@ export default function NucleusMonitoringPage() {
     setTimeout(() => {
       const nucleiRef = collection(db, 'users', user.uid, 'nuclei');
       
-      // Se não houver núcleos, cria os padrão do Manus
       if (!nucleuses || nucleuses.length === 0) {
         const defaults = [
           { name: "Manus Core Alpha", type: "primary", status: "online", syncProgress: 100 },
@@ -80,7 +78,6 @@ export default function NucleusMonitoringPage() {
           });
         });
       } else {
-        // Atualiza os existentes para 'online'
         nucleuses.forEach(n => {
           setDocumentNonBlocking(doc(db, 'users', user.uid, 'nuclei', n.id), {
             status: 'online',
