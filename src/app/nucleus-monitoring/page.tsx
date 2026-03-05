@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
 
 export default function NucleusMonitoringPage() {
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
@@ -28,8 +27,7 @@ export default function NucleusMonitoringPage() {
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    // Align with schema: /users/{userId}/nuclei
-    return query(collection(db, 'users', user.uid, 'nuclei'));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
   }, [db, user]);
 
   const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
@@ -108,7 +106,7 @@ export default function NucleusMonitoringPage() {
               <Activity className="w-5 h-5 text-accent" />
               Network Entities
             </CardTitle>
-            <CardDescription className="font-body">Continuous heartbeat monitoring for all registered nodes.</CardDescription>
+            <CardDescription className="font-body">Heartbeat monitoring for registered nodes (Top 20).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

@@ -24,9 +24,17 @@ export default function Dashboard() {
   
   const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
-  // Optimized Sync Logic: Only write if necessary
+  // Highly optimized Sync Logic: Prevents redundant writes using session storage and refs
   useEffect(() => {
     if (user && db && userProfile && !syncAttemptedRef.current) {
+      const sessionKey = `nexus_synced_${user.uid}`;
+      const alreadySynced = sessionStorage.getItem(sessionKey);
+      
+      if (alreadySynced) {
+        syncAttemptedRef.current = true;
+        return;
+      }
+
       const now = new Date();
       const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
       const oneDayInMs = 24 * 60 * 60 * 1000;
@@ -35,6 +43,8 @@ export default function Dashboard() {
       // Only perform a write if profile is missing key fields or needs credit refresh
       if (needsRefresh || userProfile.monthlyCredits === undefined) {
         syncAttemptedRef.current = true;
+        sessionStorage.setItem(sessionKey, 'true');
+        
         setDocumentNonBlocking(doc(db, 'users', user.uid), {
           name: user.displayName || userProfile.name || 'Nodo Nexus',
           email: user.email,

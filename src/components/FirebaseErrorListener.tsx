@@ -18,6 +18,10 @@ export function FirebaseErrorListener() {
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
 
   useEffect(() => {
+    // Check if we already hit the quota in this session
+    const quotaHit = sessionStorage.getItem('nexus_quota_exceeded');
+    if (quotaHit) setIsQuotaExceeded(true);
+
     const handlePermissionError = (error: FirestorePermissionError) => {
       if (isQuotaExceeded) return;
       
@@ -32,6 +36,7 @@ export function FirebaseErrorListener() {
       // Check for resource exhaustion (Quota Exceeded)
       if (error.code === 'resource-exhausted' || error.message?.toLowerCase().includes('quota')) {
         setIsQuotaExceeded(true);
+        sessionStorage.setItem('nexus_quota_exceeded', 'true');
       } else {
         toast({
           variant: "destructive",
@@ -52,33 +57,56 @@ export function FirebaseErrorListener() {
 
   if (isQuotaExceeded) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-auto">
-        <Alert variant="destructive" className="max-w-md bg-card border-destructive/50 shadow-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertCircle className="h-6 w-6 text-destructive" />
-            <AlertTitle className="text-xl font-headline font-bold m-0 text-destructive">Capacidade Máxima Atingida</AlertTitle>
+      <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-md flex items-center justify-center p-4 overflow-auto">
+        <Alert variant="destructive" className="max-w-md bg-card border-destructive/50 shadow-2xl p-8 space-y-6">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+            </div>
+            <AlertTitle className="text-2xl font-headline font-bold m-0 text-destructive">
+              Capacidade Máxima Atingida
+            </AlertTitle>
           </div>
-          <AlertDescription className="space-y-4">
-            <p className="text-sm opacity-90 leading-relaxed font-body text-foreground">
-              O BindNexus atingiu o limite de processamento diário permitido pelo Firebase (Spark Plan). 
-              As operações foram suspensas para proteger a integridade do sistema.
+          
+          <AlertDescription className="space-y-6">
+            <p className="text-base text-center opacity-90 leading-relaxed font-body text-foreground">
+              O BindNexus atingiu o limite de processamento diário gratuito permitido pelo Firebase (Spark Plan). 
+              O sistema entrará em modo de espera até o próximo ciclo.
             </p>
-            <div className="flex flex-col gap-2 p-3 bg-secondary/20 rounded-lg">
-              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Próximos Passos:</p>
-              <ul className="text-xs list-disc list-inside opacity-80 space-y-1">
-                <li>Aguarde o reset diário do Firebase (ciclo de 24h).</li>
-                <li>Reduza a frequência de geração de binds.</li>
-                <li>Verifique o console do Firebase para detalhes de cota.</li>
+            
+            <div className="space-y-3 p-4 bg-secondary/30 rounded-xl border border-border/50">
+              <p className="text-xs font-bold uppercase tracking-widest opacity-70 text-center">Status do Protocolo</p>
+              <ul className="text-xs space-y-2 opacity-80">
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                  Operações suspensas temporariamente
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                  Reset automático em aproximadamente 24h
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                  Sincronização de rede em pausa
+                </li>
               </ul>
             </div>
+
             <Button 
-              onClick={() => window.location.reload()} 
+              onClick={() => {
+                sessionStorage.removeItem('nexus_quota_exceeded');
+                window.location.reload();
+              }} 
               variant="outline" 
-              className="w-full mt-4 border-destructive/30 hover:bg-destructive/10 h-11 font-bold"
+              className="w-full border-destructive/30 hover:bg-destructive/10 h-12 font-bold text-base"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-5 h-5 mr-2" />
               Tentar Reconectar Nexus
             </Button>
+            
+            <p className="text-[10px] text-center text-muted-foreground italic">
+              Dica: Reduza a frequência de criação de binds para evitar novos bloqueios.
+            </p>
           </AlertDescription>
         </Alert>
       </div>

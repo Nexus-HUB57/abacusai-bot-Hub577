@@ -19,11 +19,11 @@ export default function BindsPage() {
     return query(
       collection(db, 'users', user.uid, 'bindCodes'),
       orderBy('createdAt', 'desc'),
-      limit(100)
+      limit(20) // Restricted for quota management
     );
   }, [db, user]);
 
-  const { data: bindCodes, isLoading } = useCollection(bindCodesQuery);
+  const { data: bindCodes, isLoading } = useCollection(bindsQuery);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -42,7 +42,7 @@ export default function BindsPage() {
               <Key className="w-5 h-5 text-accent" />
               Registros Ativos
             </CardTitle>
-            <CardDescription className="font-body">Acompanhamento detalhado do status e créditos individuais de cada bind.</CardDescription>
+            <CardDescription className="font-body">Acompanhamento detalhado do status e créditos individuais (Top 20).</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
