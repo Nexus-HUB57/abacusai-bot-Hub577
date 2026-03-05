@@ -4,27 +4,15 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, Shield, BarChart3, Smartphone, ArrowRight, CheckCircle, Cpu } from 'lucide-react';
-import { useUser, useAuth } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 export default function Home() {
-  const { user, loading } = useUser();
-  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
 
-  if (loading) return null;
+  if (isUserLoading) return null;
   if (user) redirect('/dashboard');
-
-  const handleLogin = async () => {
-    if (!auth) return;
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login failed", error);
-    }
-  };
 
   const features = [
     {
@@ -69,9 +57,11 @@ export default function Home() {
             </div>
             <span className="font-bold text-xl tracking-tight font-headline">BindNexus</span>
           </div>
-          <Button onClick={handleLogin} className="bg-primary hover:bg-primary/90">
-            Sign In
-          </Button>
+          <Link href="/auth">
+            <Button className="bg-primary hover:bg-primary/90">
+              Sign In
+            </Button>
+          </Link>
         </div>
       </nav>
 
@@ -89,10 +79,12 @@ export default function Home() {
             A comprehensive command platform for managing system bind codes and trinuclear orchestrator nuclei with surgical precision.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Button size="lg" onClick={handleLogin} className="bg-primary hover:bg-primary/90 text-lg h-14 px-8 group">
-              Initialize Nexus
-              <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </Button>
+            <Link href="/auth">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg h-14 px-8 group">
+                Initialize Nexus
+                <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="text-lg h-14 px-8 border-accent/30 hover:bg-accent/10">
               View Documentation
             </Button>
@@ -163,10 +155,12 @@ export default function Home() {
           <p className="text-xl mb-10 opacity-90 max-w-2xl mx-auto font-body relative leading-relaxed">
             Join the network and start managing your bind protocol with advanced monitoring and secure generation tools.
           </p>
-          <Button onClick={handleLogin} size="lg" variant="secondary" className="h-16 px-10 text-lg font-bold group relative">
-            Authenticate Nexus Access
-            <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </Button>
+          <Link href="/auth">
+            <Button size="lg" variant="secondary" className="h-16 px-10 text-lg font-bold group relative">
+              Authenticate Nexus Access
+              <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -178,11 +172,6 @@ export default function Home() {
              <span className="font-bold text-foreground font-headline">BindNexus</span>
           </div>
           <p className="text-sm">&copy; 2026 Orquestrador Trinuclear. All rights reserved.</p>
-          <div className="flex justify-center gap-6 text-xs">
-            <Link href="#" className="hover:text-accent transition-colors">Privacy Protocol</Link>
-            <Link href="#" className="hover:text-accent transition-colors">Security Terms</Link>
-            <Link href="#" className="hover:text-accent transition-colors">System Status</Link>
-          </div>
         </div>
       </footer>
     </div>
