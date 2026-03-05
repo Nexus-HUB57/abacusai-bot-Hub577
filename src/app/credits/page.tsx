@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from 'react';
@@ -32,7 +31,7 @@ export default function CreditsPage() {
     return query(
       collection(db, 'users', user.uid, 'creditHistory'),
       orderBy('createdAt', 'desc'),
-      limit(10) // Restricted to 10
+      limit(10)
     );
   }, [db, user]);
 
@@ -75,7 +74,7 @@ export default function CreditsPage() {
               <RefreshCw className="w-4 h-4" />
               Renovar Cota
             </Button>
-            <a href={TELEGRAM_BOT_URL} target="_blank">
+            <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">
               <Button size="sm" className="gap-2 bg-primary">
                 Inserir Créditos
                 <Send className="w-4 h-4" />
@@ -100,6 +99,7 @@ export default function CreditsPage() {
               </p>
             </CardContent>
           </Card>
+
           <Card className="bg-card/50 border-primary/20">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs uppercase font-semibold">Usado Hoje</CardDescription>
@@ -111,6 +111,7 @@ export default function CreditsPage() {
               <p className="text-xs text-muted-foreground font-body">Consumo de rede atual</p>
             </CardContent>
           </Card>
+
           <Card className="bg-card/50 border-border">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs uppercase font-semibold">Limite Padrão</CardDescription>
