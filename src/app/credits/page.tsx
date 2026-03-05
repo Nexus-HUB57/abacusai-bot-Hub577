@@ -1,12 +1,12 @@
+
 "use client";
 
-import { useMemo } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, ExternalLink, Send } from 'lucide-react';
+import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, Send } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, limit } from 'firebase/firestore';
