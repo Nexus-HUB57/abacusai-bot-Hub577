@@ -5,14 +5,21 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RefreshCw, Copy, Check } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
+  const [description, setDescription] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
+  const db = useFirestore();
 
   const generate = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -22,6 +29,42 @@ export function BindGenerator() {
     }
     setGeneratedCode(result);
     setCopied(false);
+  };
+
+  const handleSave = async () => {
+    if (!user || !generatedCode || !db) return;
+
+    setIsSaving(true);
+    const bindCodesRef = collection(db, 'bindCodes');
+    const newBind = {
+      code: generatedCode,
+      format: `:bind ${generatedCode}`,
+      status: 'active',
+      createdBy: user.uid,
+      createdAt: serverTimestamp(),
+      description: description || 'Generated via dashboard',
+    };
+
+    addDoc(bindCodesRef, newBind)
+      .then(() => {
+        toast({
+          title: "Bind Code Saved",
+          description: `Code :bind ${generatedCode} has been registered to your account.`,
+        });
+        setGeneratedCode('');
+        setDescription('');
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: bindCodesRef.path,
+          operation: 'create',
+          requestResourceData: newBind,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsSaving(false);
+      });
   };
 
   const copyToClipboard = () => {
@@ -60,15 +103,32 @@ export function BindGenerator() {
           </Button>
         </div>
 
-        <div className="flex justify-end">
+        <div className="space-y-2">
+          <Input 
+            placeholder="Add a description (optional)" 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={!generatedCode || isSaving}
+          />
+        </div>
+
+        <div className="flex gap-2">
           <Button
             onClick={copyToClipboard}
-            disabled={!generatedCode}
+            disabled={!generatedCode || isSaving}
             variant="outline"
-            className="w-full sm:w-auto border-accent/50 hover:bg-accent/10 hover:text-accent"
+            className="flex-1 border-accent/50 hover:bg-accent/10 hover:text-accent"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? 'Copied!' : 'Copy to Clipboard'}
+            {copied ? 'Copied!' : 'Copy'}
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!generatedCode || isSaving}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving ? 'Saving...' : 'Register Code'}
           </Button>
         </div>
       </CardContent>

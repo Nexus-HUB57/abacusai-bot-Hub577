@@ -1,12 +1,24 @@
 
 {
   "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Extended user information including credits and roles.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "monthlyCredits": { "type": "number" },
+        "creditsUsed": { "type": "number" },
+        "creditResetDate": { "type": "string", "format": "date-time" }
+      }
+    },
     "Nucleus": {
       "title": "Nucleus",
       "description": "A processing unit within the BindNexus network.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "name": { "type": "string" },
         "type": { "type": "string", "enum": ["primary", "secondary", "tertiary"] },
         "status": { "type": "string", "enum": ["online", "syncing", "offline", "error"] },
@@ -25,18 +37,40 @@
       "type": "object",
       "properties": {
         "code": { "type": "string" },
-        "description": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "used", "expired"] },
+        "format": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "used", "expired", "revoked"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "usedAt": { "type": "string", "format": "date-time" },
+        "usedBy": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["code", "createdBy"]
+    },
+    "BindHistory": {
+      "title": "Bind History",
+      "description": "Audit log of bind operations.",
+      "type": "object",
+      "properties": {
+        "bindCodeId": { "type": "string" },
+        "nucleusId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "sent", "confirmed", "failed"] },
+        "telegramResponse": { "type": "string" },
+        "errorMessage": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
-      },
-      "required": ["code", "userId"]
+      }
     }
   },
   "auth": {
     "providers": ["google.com"]
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile and credit tracking."
+    },
     "/nuclei/{nucleusId}": {
       "schema": "Nucleus",
       "description": "Collection of system nuclei."
@@ -44,6 +78,10 @@
     "/bindCodes/{bindCodeId}": {
       "schema": "BindCode",
       "description": "Collection of generated bind codes."
+    },
+    "/bindHistory/{historyId}": {
+      "schema": "BindHistory",
+      "description": "Audit logs for bind events."
     }
   }
 }
