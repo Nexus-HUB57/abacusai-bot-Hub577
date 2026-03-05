@@ -5,7 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Key, Database, Zap, Wallet, Loader2 } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet, Loader2, ArrowRight } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
@@ -35,20 +35,22 @@ export default function Dashboard() {
         email: user.email,
         lastSignedIn: serverTimestamp(),
         monthlyCredits: 400000,
+        // Initialize if missing
+        creditsUsed: userProfile?.creditsUsed ?? 0,
+        lastCreditRefresh: userProfile?.lastCreditRefresh ?? serverTimestamp(),
       }, { merge: true });
     }
-  }, [user, db]);
+  }, [user, db, userProfile]);
 
   // Lógica de Refresh de 24 horas: Redefine créditos usados se o ciclo expirou
   useEffect(() => {
     if (userProfile && db && user && !refreshAttemptedRef.current) {
       const now = new Date();
-      // O Firebase serverTimestamp pode retornar nulo brevemente antes de sincronizar
       const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
       const oneDayInMs = 24 * 60 * 60 * 1000;
 
       if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
-        if (userProfile.creditsUsed !== 0) {
+        if ((userProfile.creditsUsed || 0) !== 0) {
           refreshAttemptedRef.current = true;
           const userRef = doc(db, 'users', user.uid);
           setDocumentNonBlocking(userRef, {
@@ -64,7 +66,7 @@ export default function Dashboard() {
   // Consultas estritamente limitadas para economizar cota de leitura do Firebase Spark
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(20));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(10));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
@@ -151,7 +153,14 @@ export default function Dashboard() {
                           log.status === 'pending' ? 'bg-accent' : 'bg-destructive'
                         }`} />
                         <div>
-                          <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
+                            {log.creditsAllocated && (
+                              <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded-full font-bold">
+                                +{log.creditsAllocated.toLocaleString()} CR
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">
                             Ação: {log.action?.replace(/_/g, ' ')}
                           </p>

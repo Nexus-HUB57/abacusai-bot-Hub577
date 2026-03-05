@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { RefreshCw, Copy, Check, Save, Loader2, Zap, ExternalLink, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 
 const BIND_INITIAL_CREDITS = 40000;
 const USER_SUPPLY_QUOTA = 400000;
-const GENERATION_COST = 1;
+const GENERATION_COST = 40000; // Updated: Generating a bind now "transfers" 40k from user supply
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -81,16 +81,20 @@ export function BindGenerator() {
         description: description || 'Bind de protocolo de alta entropia',
       };
 
+      // 1. Create the bind with 40,000 credits
       addDocumentNonBlocking(bindCodesRef, newBind);
       
+      // 2. Deduct 40,000 from user daily supply
       setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
+      // 3. Log history
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'CREATE_BIND',
         bindCode: generatedCode,
+        creditsAllocated: BIND_INITIAL_CREDITS,
         status: 'confirmed',
         createdAt: serverTimestamp(),
       });
@@ -99,13 +103,13 @@ export function BindGenerator() {
         ownerId: user.uid,
         action: 'CONSUME_CREDIT',
         creditsUsed: GENERATION_COST,
-        description: `Bind gerado: ${generatedCode} com ${BIND_INITIAL_CREDITS} créditos.`,
+        description: `Protocolo :bind ${generatedCode} inicializado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos.`,
         createdAt: serverTimestamp(),
       });
 
       toast({
         title: "Protocolo Inicializado",
-        description: `Código :bind ${generatedCode} registrado com sucesso.`,
+        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos.`,
       });
       
       setGeneratedCode('');
@@ -139,15 +143,15 @@ export function BindGenerator() {
         <div className="flex items-center justify-between">
           <CardDescription className="font-body flex items-center gap-2">
             <Zap className="w-3 h-3 text-yellow-500" />
-            Créditos Diários: {availableCredits.toLocaleString()} / {USER_SUPPLY_QUOTA.toLocaleString()}
+            Suprimento Nexus: {availableCredits.toLocaleString()} / {USER_SUPPLY_QUOTA.toLocaleString()}
           </CardDescription>
-          {availableCredits <= 10 && (
+          {availableCredits < GENERATION_COST && (
             <a 
               href="https://manus.go.link/iW6sB?action=open-subscription" 
               target="_blank" 
-              className="text-[10px] text-accent hover:underline flex items-center gap-1"
+              className="text-[10px] text-accent hover:underline flex items-center gap-1 font-bold"
             >
-              Inserir Créditos <ExternalLink className="w-2 h-2" />
+              UPGRADE <ExternalLink className="w-2 h-2" />
             </a>
           )}
         </div>
@@ -195,18 +199,18 @@ export function BindGenerator() {
           </Button>
         </div>
         
-        {availableCredits < 1 && (
+        {availableCredits < GENERATION_COST && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-3 items-start">
             <Info className="w-4 h-4 text-destructive mt-0.5" />
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-destructive">Suprimento Esgotado</p>
+              <p className="text-xs font-semibold text-destructive uppercase tracking-wider">Suprimento Nexus Esgotado</p>
               <p className="text-[10px] text-muted-foreground leading-tight">
-                Você não tem créditos suficientes. Por favor, faça upgrade para continuar operando.
+                Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.
               </p>
               <a 
                 href="https://manus.go.link/iW6sB?action=open-subscription" 
                 target="_blank" 
-                className="text-[10px] text-accent hover:underline font-bold block mt-1"
+                className="text-[10px] text-accent hover:underline font-bold block mt-1 break-all"
               >
                 https://manus.go.link/iW6sB?action=open-subscription
               </a>
