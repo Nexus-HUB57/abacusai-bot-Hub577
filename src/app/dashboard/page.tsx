@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -5,7 +6,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Key, Database, Zap } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
@@ -16,27 +17,29 @@ export default function Dashboard() {
   const db = useFirestore();
   const hasSyncedRef = useRef(false);
 
-  // Sync user profile on first load using non-blocking set with merge
+  // Sync user profile on load with default credits if missing
   useEffect(() => {
     if (user && db && !hasSyncedRef.current) {
       hasSyncedRef.current = true;
       const userRef = doc(db, 'users', user.uid);
       setDocumentNonBlocking(userRef, {
-        name: user.displayName || 'Anonymous User',
+        name: user.displayName || 'Anonymous Nexus Node',
         email: user.email,
         lastSignedIn: serverTimestamp(),
+        // Initialize standard quota if document is new or credits missing
+        monthlyCredits: 40000,
       }, { merge: true });
     }
   }, [user, db]);
 
-  // User profile for credits
+  // User profile for telemetry
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
-  // Stats queries
+  // Real-time stats
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(collection(db, 'users', user.uid, 'bindCodes'));
@@ -62,11 +65,13 @@ export default function Dashboard() {
   if (isUserLoading) return null;
   if (!user) redirect('/auth');
 
+  const availableCredits = (userProfile?.monthlyCredits || 40000) - (userProfile?.creditsUsed || 0);
+
   const stats = [
-    { label: 'Active Binds', value: binds?.length || 0, icon: Key, color: 'text-accent' },
-    { label: 'Total Nuclei', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Syncing Nodes', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
-    { label: 'Credits Left', value: (userProfile?.monthlyCredits || 40000) - (userProfile?.creditsUsed || 0), icon: Activity, color: 'text-green-500' },
+    { label: 'Network Binds', value: binds?.length || 0, icon: Key, color: 'text-accent' },
+    { label: 'Active Nuclei', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
+    { label: 'Sync Status', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Token Balance', value: availableCredits, icon: Wallet, color: 'text-green-500' },
   ];
 
   return (
@@ -75,19 +80,19 @@ export default function Dashboard() {
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Nexus Command Center</h1>
-          <p className="text-muted-foreground font-body">Monitor and manage your system-wide bind architecture.</p>
+          <p className="text-muted-foreground font-body">Orchestrate binds with individual credit allocations of 40,000.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, i) => (
-            <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
+            <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-accent/30 transition-colors">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium font-body">{stat.label}</CardTitle>
-                <stat.icon className={`w-4 h-4 ${stat.icon === Key ? 'text-accent' : stat.icon === Database ? 'text-primary' : stat.icon === Zap ? 'text-yellow-500' : 'text-green-500'}`} />
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider font-body text-muted-foreground">{stat.label}</CardTitle>
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold font-headline">{stat.value.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Real-time telemetry active</p>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Live Data Stream</p>
               </CardContent>
             </Card>
           ))}
@@ -101,33 +106,36 @@ export default function Dashboard() {
         <section className="mt-8">
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle className="font-headline">Recent Operations</CardTitle>
+              <CardTitle className="font-headline flex items-center gap-2">
+                <Activity className="w-5 h-5 text-accent" />
+                Recent Network Operations
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentLogs && recentLogs.length > 0 ? (
                   recentLogs.map((log: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/40 group hover:bg-secondary/50 transition-colors">
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 border border-border/40 group hover:bg-secondary/40 transition-all">
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${
-                          log.status === 'confirmed' ? 'bg-green-500' : 
+                          log.status === 'confirmed' ? 'bg-green-500 animate-pulse' : 
                           log.status === 'pending' ? 'bg-accent' : 'bg-destructive'
                         }`} />
                         <div>
-                          <p className="text-sm font-medium font-body">Bind operation: :bind {log.bindCode}</p>
-                          <p className="text-xs text-muted-foreground font-body">Action: {log.action}</p>
+                          <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
+                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">Action: {log.action?.replace(/_/g, ' ')}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground font-code">
+                      <span className="text-xs text-muted-foreground font-code bg-background/50 px-2 py-1 rounded">
                         {log.createdAt?.seconds 
                           ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() 
-                          : 'Recent'}
+                          : 'REALTIME'}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground font-body">
-                    No recent activities recorded.
+                  <div className="text-center py-12 text-muted-foreground font-body text-sm italic">
+                    Waiting for network activity...
                   </div>
                 )}
               </div>

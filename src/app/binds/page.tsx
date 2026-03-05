@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Key, MoreHorizontal, Loader2 } from 'lucide-react';
+import { Key, MoreHorizontal, Loader2, Coins } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -23,7 +23,7 @@ export default function BindsPage() {
     );
   }, [db, user]);
 
-  const { data: bindCodes, isLoading } = useCollection(bindsQuery);
+  const { data: bindCodes, isLoading } = useCollection(bindCodesQuery);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -32,7 +32,7 @@ export default function BindsPage() {
         <header className="flex justify-between items-end mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Bind Directory</h1>
-            <p className="text-muted-foreground font-body">Comprehensive list of all generated system codes.</p>
+            <p className="text-muted-foreground font-body">Manage all high-entropy alphanumeric bind protocols.</p>
           </div>
         </header>
 
@@ -42,7 +42,7 @@ export default function BindsPage() {
               <Key className="w-5 h-5 text-accent" />
               Active Records
             </CardTitle>
-            <CardDescription className="font-body">Real-time status tracking for all bind operations.</CardDescription>
+            <CardDescription className="font-body">Detailed status and credit tracking for each individual bind.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -53,9 +53,9 @@ export default function BindsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-headline">Code</TableHead>
+                    <TableHead className="font-headline">Bind Command</TableHead>
+                    <TableHead className="font-headline">Credits</TableHead>
                     <TableHead className="font-headline">Description</TableHead>
-                    <TableHead className="font-headline">Created</TableHead>
                     <TableHead className="font-headline">Status</TableHead>
                     <TableHead className="text-right font-headline">Actions</TableHead>
                   </TableRow>
@@ -63,23 +63,30 @@ export default function BindsPage() {
                 <TableBody>
                   {bindCodes.map((bind: any) => (
                     <TableRow key={bind.id} className="group">
-                      <TableCell className="font-code font-bold text-accent">
+                      <TableCell className="font-code font-bold text-accent whitespace-nowrap">
                         :bind {bind.code}
                       </TableCell>
-                      <TableCell className="max-w-xs truncate font-body">
-                        {bind.description || 'No description'}
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 font-code text-xs">
+                          <Coins className="w-3 h-3 text-yellow-500" />
+                          <span className="font-bold text-foreground">
+                            {(bind.remainingCredits ?? 40000).toLocaleString()}
+                          </span>
+                          <span className="text-muted-foreground">/</span>
+                          <span className="text-muted-foreground">
+                            {(bind.totalCredits ?? 40000).toLocaleString()}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs font-code">
-                        {bind.createdAt?.seconds 
-                          ? new Date(bind.createdAt.seconds * 1000).toLocaleDateString() 
-                          : 'Pending...'}
+                      <TableCell className="max-w-xs truncate font-body text-sm text-muted-foreground">
+                        {bind.description || 'System generated bind'}
                       </TableCell>
                       <TableCell>
                         <Badge 
                           variant={bind.status === 'active' ? 'default' : bind.status === 'expired' ? 'destructive' : 'secondary'}
                           className={bind.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}
                         >
-                          {bind.status?.toUpperCase()}
+                          {bind.status?.toUpperCase() || 'ACTIVE'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -93,7 +100,7 @@ export default function BindsPage() {
               </Table>
             ) : (
               <div className="text-center py-20 text-muted-foreground font-body">
-                No bind codes found. Generate one in the dashboard!
+                No bind records found. Initialize a new bind in the command center.
               </div>
             )}
           </CardContent>

@@ -1,15 +1,17 @@
+
 'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Copy, Check, Save, Loader2 } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save, Loader2, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
 
-const CREDIT_COST = 1;
+const BIND_INITIAL_CREDITS = 40000;
+const GENERATION_COST = 1;
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -21,10 +23,9 @@ export function BindGenerator() {
   const db = useFirestore();
 
   const generate = () => {
-    // Extended charset to include lowercase for higher entropy as requested
+    // 24-character alphanumeric string for high entropy
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
-    // Increased length to 24 characters to match the provided examples
     for (let i = 0; i < 24; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -44,11 +45,11 @@ export function BindGenerator() {
       const userData = userSnap.exists() ? userSnap.data() : { monthlyCredits: 40000, creditsUsed: 0 };
       const availableCredits = (userData.monthlyCredits || 40000) - (userData.creditsUsed || 0);
 
-      if (availableCredits < CREDIT_COST) {
+      if (availableCredits < GENERATION_COST) {
         toast({
           variant: "destructive",
-          title: "Insufficient Credits",
-          description: `Credit threshold reached. Current balance: ${availableCredits}`,
+          title: "Insufficient User Credits",
+          description: `You need ${GENERATION_COST} credit to generate a new bind. Current balance: ${availableCredits}`,
         });
         setIsSaving(false);
         return;
@@ -59,20 +60,22 @@ export function BindGenerator() {
         code: generatedCode,
         format: `:bind ${generatedCode}`,
         status: 'active',
+        totalCredits: BIND_INITIAL_CREDITS,
+        remainingCredits: BIND_INITIAL_CREDITS,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
-        description: description || 'Generated via dashboard',
+        description: description || 'High-entropy protocol bind',
       };
 
-      // Non-blocking writes for better UX
+      // Register the new bind with its individual credit allocation
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // Consume credit using set + merge to ensure it works even if the profile doc is missing
+      // Consume 1 credit from user balance for the generation action
       setDocumentNonBlocking(userRef, {
-        creditsUsed: increment(CREDIT_COST)
+        creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
-      // Log bind history
+      // Record logs
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'CREATE_BIND',
@@ -81,18 +84,17 @@ export function BindGenerator() {
         createdAt: serverTimestamp(),
       });
 
-      // Log credit history
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'creditHistory'), {
         ownerId: user.uid,
         action: 'CONSUME_CREDIT',
-        creditsUsed: CREDIT_COST,
-        description: `Generated bind code: ${generatedCode}`,
+        creditsUsed: GENERATION_COST,
+        description: `Generated bind code: ${generatedCode} with ${BIND_INITIAL_CREDITS} credits.`,
         createdAt: serverTimestamp(),
       });
 
       toast({
-        title: "Bind Code Registered",
-        description: `Code :bind ${generatedCode} is now active.`,
+        title: "Protocol Initialized",
+        description: `Code :bind ${generatedCode} registered with ${BIND_INITIAL_CREDITS} credits.`,
       });
       
       setGeneratedCode('');
@@ -100,7 +102,7 @@ export function BindGenerator() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Operation Failed",
+        title: "Initialization Error",
         description: error.message,
       });
     } finally {
@@ -121,9 +123,12 @@ export function BindGenerator() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline">
           <RefreshCw className="w-5 h-5 text-accent" />
-          Bind Generator
+          Protocol Generator
         </CardTitle>
-        <CardDescription className="font-body">Protocol cost: {CREDIT_COST} Token</CardDescription>
+        <CardDescription className="font-body flex items-center gap-2">
+          <Zap className="w-3 h-3 text-yellow-500" />
+          Initial individual bind allocation: {BIND_INITIAL_CREDITS.toLocaleString()} credits
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
@@ -131,17 +136,17 @@ export function BindGenerator() {
             <Input
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
-              placeholder="Click generate to initialize"
-              className="font-code text-sm bg-secondary/30 border-primary/20 h-12"
+              placeholder="Generate 24-char alphanumeric bind"
+              className="font-code text-xs bg-secondary/30 border-primary/20 h-12"
             />
           </div>
-          <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90 px-6">
             Generate
           </Button>
         </div>
 
         <Input 
-          placeholder="System Description (Optional)" 
+          placeholder="Purpose / Description (Optional)" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)}
           disabled={!generatedCode || isSaving}
@@ -156,7 +161,7 @@ export function BindGenerator() {
             className="flex-1 border-accent/50 hover:bg-accent/10"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? 'Copied' : 'Copy Full Command'}
           </Button>
           <Button
             onClick={handleSave}
@@ -164,7 +169,7 @@ export function BindGenerator() {
             className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            {isSaving ? 'Processing...' : 'Register'}
+            {isSaving ? 'Registering...' : 'Initialize Bind'}
           </Button>
         </div>
       </CardContent>

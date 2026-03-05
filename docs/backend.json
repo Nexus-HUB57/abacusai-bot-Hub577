@@ -75,6 +75,14 @@
           "type": "string",
           "description": "The current status of the bind code (e.g., 'active', 'used', 'expired')."
         },
+        "totalCredits": {
+          "type": "number",
+          "description": "The initial total credits allocated to this specific bind."
+        },
+        "remainingCredits": {
+          "type": "number",
+          "description": "The current remaining credits for this bind."
+        },
         "ownerId": {
           "type": "string",
           "description": "Reference to the User who owns this bind code."
@@ -90,7 +98,9 @@
         "code",
         "status",
         "ownerId",
-        "createdAt"
+        "createdAt",
+        "totalCredits",
+        "remainingCredits"
       ]
     },
     "LogEntry": {
