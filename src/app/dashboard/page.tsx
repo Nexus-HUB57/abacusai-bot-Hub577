@@ -14,7 +14,8 @@ import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebas
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
-  const hasSyncedRef = useRef(false);
+  const syncAttemptedRef = useRef(false);
+  const refreshAttemptedRef = useRef(false);
 
   // Perfil do usuário para telemetria
   const userProfileRef = useMemoFirebase(() => {
@@ -25,14 +26,14 @@ export default function Dashboard() {
 
   // Sincronizar perfil e inicializar cota diária
   useEffect(() => {
-    if (user && db && !hasSyncedRef.current) {
-      hasSyncedRef.current = true;
+    if (user && db && !syncAttemptedRef.current) {
+      syncAttemptedRef.current = true;
       const userRef = doc(db, 'users', user.uid);
       setDocumentNonBlocking(userRef, {
         name: user.displayName || 'Nodo Nexus Anônimo',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-        // Fornecimento inicial de 400.000 créditos
+        // Fornecimento inicial de 400.000 créditos se for novo
         monthlyCredits: 400000,
       }, { merge: true });
     }
@@ -40,12 +41,13 @@ export default function Dashboard() {
 
   // Lógica de Refresh de 24 horas: Redefine créditos usados
   useEffect(() => {
-    if (userProfile && db && user) {
+    if (userProfile && db && user && !refreshAttemptedRef.current) {
       const now = new Date();
       const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
       const oneDayInMs = 24 * 60 * 60 * 1000;
 
       if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
+        refreshAttemptedRef.current = true;
         const userRef = doc(db, 'users', user.uid);
         setDocumentNonBlocking(userRef, {
           creditsUsed: 0,

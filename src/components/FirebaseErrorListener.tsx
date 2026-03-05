@@ -1,39 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestoreError } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * An invisible component that listens for globally emitted 'permission-error' events.
- * It throws any received error to be caught by Next.js's global-error.tsx.
+ * A centralized component that listens for Firestore-related errors
+ * and surfaces them to the user via Toasts.
  */
 export function FirebaseErrorListener() {
-  // Use the specific error type for the state for type safety.
-  const [error, setError] = useState<FirestorePermissionError | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // The callback now expects a strongly-typed error, matching the event payload.
-    const handleError = (error: FirestorePermissionError) => {
-      // Set error in state to trigger a re-render.
-      setError(error);
+    // Handle specific permission errors (often used for LLM debugging)
+    const handlePermissionError = (error: FirestorePermissionError) => {
+      console.error('Permission Denied Context:', error.request);
+      toast({
+        variant: "destructive",
+        title: "Protocolo Negado",
+        description: `Falha de permissão no caminho: ${error.request.path}. Certifique-se de estar autenticado corretamente.`,
+      });
     };
 
-    // The typed emitter will enforce that the callback for 'permission-error'
-    // matches the expected payload type (FirestorePermissionError).
-    errorEmitter.on('permission-error', handleError);
+    // Handle general Firestore errors (like Quota Exceeded)
+    const handleFirestoreError = (error: FirestoreError) => {
+      console.error('Firestore Platform Error:', error.code, error.message);
+      
+      if (error.code === 'resource-exhausted') {
+        toast({
+          variant: "destructive",
+          title: "Cota de Rede Excedida",
+          description: "O limite de recursos do Firebase para este projeto foi atingido hoje. Por favor, tente novamente mais tarde.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro de Comunicação Nexus",
+          description: `Ocorreu uma falha no banco de dados (${error.code}).`,
+        });
+      }
+    };
 
-    // Unsubscribe on unmount to prevent memory leaks.
+    errorEmitter.on('permission-error', handlePermissionError);
+    errorEmitter.on('firestore-error', handleFirestoreError);
+
     return () => {
-      errorEmitter.off('permission-error', handleError);
+      errorEmitter.off('permission-error', handlePermissionError);
+      errorEmitter.off('firestore-error', handleFirestoreError);
     };
-  }, []);
+  }, [toast]);
 
-  // On re-render, if an error exists in state, throw it.
-  if (error) {
-    throw error;
-  }
-
-  // This component renders nothing.
   return null;
 }
