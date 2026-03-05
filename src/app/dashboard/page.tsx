@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
@@ -10,11 +10,23 @@ import { Activity, Key, Database, Zap, Clock } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { redirect } from 'next/navigation';
-import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+
+  // Sync user profile on first load
+  useEffect(() => {
+    if (user && db) {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, {
+        name: user.displayName || 'Anonymous User',
+        email: user.email,
+        lastSignedIn: serverTimestamp(),
+      }, { merge: true });
+    }
+  }, [user, db]);
 
   // User profile for credits
   const userProfileRef = useMemo(() => {

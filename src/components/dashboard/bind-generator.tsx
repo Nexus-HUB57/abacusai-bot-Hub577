@@ -5,12 +5,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Copy, Check, Save } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+
+const CREDIT_COST = 50; // Example cost per bind code generation
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -35,36 +37,80 @@ export function BindGenerator() {
     if (!user || !generatedCode || !db) return;
 
     setIsSaving(true);
-    const bindCodesRef = collection(db, 'bindCodes');
-    const newBind = {
-      code: generatedCode,
-      format: `:bind ${generatedCode}`,
-      status: 'active',
-      createdBy: user.uid,
-      createdAt: serverTimestamp(),
-      description: description || 'Generated via dashboard',
-    };
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) throw new Error("User profile not found");
+      
+      const userData = userSnap.data();
+      const availableCredits = (userData.monthlyCredits || 40000) - (userData.creditsUsed || 0);
 
-    addDoc(bindCodesRef, newBind)
-      .then(() => {
+      if (availableCredits < CREDIT_COST) {
         toast({
-          title: "Bind Code Saved",
-          description: `Code :bind ${generatedCode} has been registered to your account.`,
+          variant: "destructive",
+          title: "Insufficient Credits",
+          description: `You need ${CREDIT_COST} credits, but only have ${availableCredits} available.`,
         });
-        setGeneratedCode('');
-        setDescription('');
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: bindCodesRef.path,
-          operation: 'create',
-          requestResourceData: newBind,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
         setIsSaving(false);
+        return;
+      }
+
+      const bindCodesRef = collection(db, 'bindCodes');
+      const newBind = {
+        code: generatedCode,
+        format: `:bind ${generatedCode}`,
+        status: 'active',
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        description: description || 'Generated via dashboard',
+      };
+
+      // Perform mutation (Non-blocking as per guidelines, but here we chain for sequencing)
+      const bindDoc = await addDoc(bindCodesRef, newBind);
+
+      // Consume credits
+      updateDoc(userRef, {
+        creditsUsed: increment(CREDIT_COST)
       });
+
+      // Log activity & credit history
+      addDoc(collection(db, 'activityLogs'), {
+        userId: user.uid,
+        action: 'CREATE_BIND_CODE',
+        description: `Generated code :bind ${generatedCode}`,
+        resourceType: 'bindCode',
+        resourceId: bindDoc.id,
+        createdAt: serverTimestamp(),
+      });
+
+      addDoc(collection(db, 'creditHistory'), {
+        userId: user.uid,
+        action: 'CREATE_BIND_CODE',
+        creditsUsed: CREDIT_COST,
+        description: `Consumed ${CREDIT_COST} credits for code generation`,
+        bindCodeId: bindDoc.id,
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Bind Code Saved",
+        description: `Code :bind ${generatedCode} registered. ${CREDIT_COST} credits consumed.`,
+      });
+      
+      setGeneratedCode('');
+      setDescription('');
+
+    } catch (error: any) {
+      const permissionError = new FirestorePermissionError({
+        path: 'bindCodes/or/users',
+        operation: 'write',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const copyToClipboard = () => {
@@ -86,7 +132,7 @@ export function BindGenerator() {
           <RefreshCw className="w-5 h-5 text-accent" />
           Bind Code Generator
         </CardTitle>
-        <CardDescription>Generate unique alphanumeric codes for secure linking.</CardDescription>
+        <CardDescription>Generate unique codes. Cost: {CREDIT_COST} credits.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
