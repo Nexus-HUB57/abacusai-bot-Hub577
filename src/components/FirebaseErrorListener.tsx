@@ -19,7 +19,6 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handlePermissionError = (error: FirestorePermissionError) => {
-      // Don't toast if we're already showing the quota overlay
       if (isQuotaExceeded) return;
       
       toast({
@@ -61,24 +60,24 @@ export function FirebaseErrorListener() {
           </div>
           <AlertDescription className="space-y-4">
             <p className="text-sm opacity-90 leading-relaxed font-body text-foreground">
-              O BindNexus atingiu o limite de processamento diário permitido pelo provedor de infraestrutura (Firebase Free Tier). 
-              Todas as operações de rede foram temporariamente suspensas para evitar perda de dados.
+              O BindNexus atingiu o limite de processamento diário permitido pelo Firebase (Spark Plan). 
+              As operações foram suspensas para proteger a integridade do sistema.
             </p>
             <div className="flex flex-col gap-2 p-3 bg-secondary/20 rounded-lg">
               <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Próximos Passos:</p>
               <ul className="text-xs list-disc list-inside opacity-80 space-y-1">
-                <li>Aguarde o reset automático do Firebase (ciclo de 24h).</li>
-                <li>Considere reduzir a frequência de atualizações em tempo real.</li>
-                <li>Verifique se há atualizações de plano disponíveis no console.</li>
+                <li>Aguarde o reset diário do Firebase (ciclo de 24h).</li>
+                <li>Reduza a frequência de geração de binds.</li>
+                <li>Verifique o console do Firebase para detalhes de cota.</li>
               </ul>
             </div>
             <Button 
               onClick={() => window.location.reload()} 
               variant="outline" 
-              className="w-full mt-4 border-destructive/30 hover:bg-destructive/10 h-11"
+              className="w-full mt-4 border-destructive/30 hover:bg-destructive/10 h-11 font-bold"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Tentar Reconectar
+              Tentar Reconectar Nexus
             </Button>
           </AlertDescription>
         </Alert>

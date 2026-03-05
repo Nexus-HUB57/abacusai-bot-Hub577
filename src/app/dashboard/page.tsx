@@ -5,7 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Key, Database, Zap, Wallet, Loader2, ArrowRight } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
@@ -15,9 +15,8 @@ export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const syncAttemptedRef = useRef(false);
-  const refreshAttemptedRef = useRef(false);
 
-  // Perfil do usuário para telemetria - Estável via useMemoFirebase
+  // Profile ref (stable)
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
@@ -25,54 +24,39 @@ export default function Dashboard() {
   
   const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
-  // Sincronizar perfil e inicializar cota diária
+  // Optimized Sync Logic: Only write if necessary
   useEffect(() => {
-    if (user && db && !syncAttemptedRef.current) {
-      syncAttemptedRef.current = true;
-      const userRef = doc(db, 'users', user.uid);
-      setDocumentNonBlocking(userRef, {
-        name: user.displayName || 'Nodo Nexus Anônimo',
-        email: user.email,
-        lastSignedIn: serverTimestamp(),
-        monthlyCredits: 400000,
-        // Initialize if missing
-        creditsUsed: userProfile?.creditsUsed ?? 0,
-        lastCreditRefresh: userProfile?.lastCreditRefresh ?? serverTimestamp(),
-      }, { merge: true });
-    }
-  }, [user, db, userProfile]);
-
-  // Lógica de Refresh de 24 horas: Redefine créditos usados se o ciclo expirou
-  useEffect(() => {
-    if (userProfile && db && user && !refreshAttemptedRef.current) {
+    if (user && db && userProfile && !syncAttemptedRef.current) {
       const now = new Date();
       const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
       const oneDayInMs = 24 * 60 * 60 * 1000;
+      const needsRefresh = now.getTime() - lastRefresh.getTime() >= oneDayInMs;
 
-      if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
-        if ((userProfile.creditsUsed || 0) !== 0) {
-          refreshAttemptedRef.current = true;
-          const userRef = doc(db, 'users', user.uid);
-          setDocumentNonBlocking(userRef, {
-            creditsUsed: 0,
-            lastCreditRefresh: serverTimestamp(),
-            monthlyCredits: 400000, 
-          }, { merge: true });
-        }
+      // Only perform a write if profile is missing key fields or needs credit refresh
+      if (needsRefresh || userProfile.monthlyCredits === undefined) {
+        syncAttemptedRef.current = true;
+        setDocumentNonBlocking(doc(db, 'users', user.uid), {
+          name: user.displayName || userProfile.name || 'Nodo Nexus',
+          email: user.email,
+          lastSignedIn: serverTimestamp(),
+          monthlyCredits: 400000,
+          creditsUsed: needsRefresh ? 0 : (userProfile.creditsUsed ?? 0),
+          lastCreditRefresh: needsRefresh ? serverTimestamp() : (userProfile.lastCreditRefresh ?? serverTimestamp()),
+        }, { merge: true });
       }
     }
-  }, [userProfile, db, user]);
+  }, [user, db, userProfile]);
 
-  // Consultas estritamente limitadas para economizar cota de leitura do Firebase Spark
+  // Heavily limited queries to conserve Spark Plan quota
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(10));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(5));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(10));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(5));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -97,9 +81,9 @@ export default function Dashboard() {
   const availableCredits = (userProfile?.monthlyCredits || 400000) - (userProfile?.creditsUsed || 0);
 
   const stats = [
-    { label: 'Binds de Rede', value: binds?.length || 0, icon: Key, color: 'text-accent' },
-    { label: 'Núcleos Ativos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Sincronização', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Binds Ativos', value: binds?.length || 0, icon: Key, color: 'text-accent' },
+    { label: 'Núcleos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
+    { label: 'Sync Status', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
     { label: 'Saldo Diário', value: Math.max(0, availableCredits), icon: Wallet, color: 'text-green-500' },
   ];
 
@@ -108,7 +92,7 @@ export default function Dashboard() {
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline text-foreground">Centro de Comando Nexus</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
           <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
         </header>
 
@@ -116,14 +100,13 @@ export default function Dashboard() {
           {stats.map((stat, i) => (
             <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-accent/30 transition-colors shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider font-body text-muted-foreground">{stat.label}</CardTitle>
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</CardTitle>
                 <stat.icon className={`w-4 h-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold font-headline">
                   {profileLoading && stat.label === 'Saldo Diário' ? '...' : stat.value.toLocaleString()}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Fluxo em Tempo Real</p>
               </CardContent>
             </Card>
           ))}
@@ -153,29 +136,22 @@ export default function Dashboard() {
                           log.status === 'pending' ? 'bg-accent' : 'bg-destructive'
                         }`} />
                         <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
-                            {log.creditsAllocated && (
-                              <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded-full font-bold">
-                                +{log.creditsAllocated.toLocaleString()} CR
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">
-                            Ação: {log.action?.replace(/_/g, ' ')}
+                          <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
+                          <p className="text-[10px] text-muted-foreground font-body uppercase">
+                            {log.action?.replace(/_/g, ' ')}
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground font-code bg-background/50 px-2 py-1 rounded">
+                      <span className="text-xs text-muted-foreground font-code">
                         {log.createdAt?.seconds 
                           ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() 
-                          : 'Sincronizando...'}
+                          : 'Recent'}
                       </span>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-12 text-muted-foreground font-body text-sm italic border-2 border-dashed rounded-xl">
-                    Aguardando atividade na rede...
+                    Nenhuma atividade recente registrada.
                   </div>
                 )}
               </div>
