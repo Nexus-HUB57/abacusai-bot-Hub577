@@ -5,7 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Key, Database, Zap, Wallet } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
@@ -17,14 +17,15 @@ export default function Dashboard() {
   const syncAttemptedRef = useRef(false);
   const refreshAttemptedRef = useRef(false);
 
-  // Perfil do usuário para telemetria
+  // Perfil do usuário para telemetria - Estável via useMemoFirebase
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-  const { data: userProfile } = useDoc(userProfileRef);
+  
+  const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
-  // Sincronizar perfil e inicializar cota diária - Apenas uma vez por montagem
+  // Sincronizar perfil e inicializar cota diária
   useEffect(() => {
     if (user && db && !syncAttemptedRef.current) {
       syncAttemptedRef.current = true;
@@ -38,10 +39,11 @@ export default function Dashboard() {
     }
   }, [user, db]);
 
-  // Lógica de Refresh de 24 horas: Redefine créditos usados
+  // Lógica de Refresh de 24 horas: Redefine créditos usados se o ciclo expirou
   useEffect(() => {
     if (userProfile && db && user && !refreshAttemptedRef.current) {
       const now = new Date();
+      // O Firebase serverTimestamp pode retornar nulo brevemente antes de sincronizar
       const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
       const oneDayInMs = 24 * 60 * 60 * 1000;
 
@@ -59,16 +61,16 @@ export default function Dashboard() {
     }
   }, [userProfile, db, user]);
 
-  // Limitar resultados para economizar cota de leitura
+  // Consultas limitadas para economizar cota de leitura do Firebase Spark
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(50));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(30));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(15));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -82,7 +84,12 @@ export default function Dashboard() {
   }, [db, user]);
   const { data: recentLogs } = useCollection(historyQuery);
 
-  if (isUserLoading) return null;
+  if (isUserLoading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="w-10 h-10 animate-spin text-primary" />
+    </div>
+  );
+  
   if (!user) redirect('/auth');
 
   const availableCredits = (userProfile?.monthlyCredits || 400000) - (userProfile?.creditsUsed || 0);
@@ -105,14 +112,16 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, i) => (
-            <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-accent/30 transition-colors">
+            <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-accent/30 transition-colors shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-xs font-semibold uppercase tracking-wider font-body text-muted-foreground">{stat.label}</CardTitle>
                 <stat.icon className={`w-4 h-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-headline">{stat.value.toLocaleString()}</div>
-                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Fluxo de Dados em Tempo Real</p>
+                <div className="text-2xl font-bold font-headline">
+                  {profileLoading && stat.label === 'Saldo Diário' ? '...' : stat.value.toLocaleString()}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Fluxo em Tempo Real</p>
               </CardContent>
             </Card>
           ))}
@@ -124,9 +133,9 @@ export default function Dashboard() {
         </div>
 
         <section className="mt-8">
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 shadow-sm">
             <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
+              <CardTitle className="font-headline text-lg flex items-center gap-2">
                 <Activity className="w-5 h-5 text-accent" />
                 Operações de Rede Recentes
               </CardTitle>
@@ -143,18 +152,20 @@ export default function Dashboard() {
                         }`} />
                         <div>
                           <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
-                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">Ação: {log.action?.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">
+                            Ação: {log.action?.replace(/_/g, ' ')}
+                          </p>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-code bg-background/50 px-2 py-1 rounded">
                         {log.createdAt?.seconds 
                           ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() 
-                          : 'TEMPO REAL'}
+                          : 'Sincronizando...'}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground font-body text-sm italic">
+                  <div className="text-center py-12 text-muted-foreground font-body text-sm italic border-2 border-dashed rounded-xl">
                     Aguardando atividade na rede...
                   </div>
                 )}
