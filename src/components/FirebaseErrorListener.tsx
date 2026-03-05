@@ -14,12 +14,12 @@ export function FirebaseErrorListener() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Handle specific permission errors (often used for LLM debugging)
+    // Handle specific permission errors
     const handlePermissionError = (error: FirestorePermissionError) => {
       toast({
         variant: "destructive",
         title: "Protocolo Negado",
-        description: `Falha de permissão no acesso aos dados. Certifique-se de estar autenticado corretamente.`,
+        description: `Falha de permissão no acesso aos dados. Verifique suas regras de segurança ou autenticação.`,
       });
     };
 
@@ -29,7 +29,7 @@ export function FirebaseErrorListener() {
         toast({
           variant: "destructive",
           title: "Cota de Rede Excedida",
-          description: "O limite de recursos diários do Firebase (Plano Spark) foi atingido. O sistema voltará a operar no próximo ciclo de 24h.",
+          description: "O limite de recursos diários do Firebase (Plano Spark) foi atingido. O sistema voltará a operar no próximo ciclo de 24h ou após upgrade do plano.",
         });
       } else {
         toast({

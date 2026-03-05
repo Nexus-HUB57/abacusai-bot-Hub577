@@ -46,7 +46,6 @@ export default function Dashboard() {
       const oneDayInMs = 24 * 60 * 60 * 1000;
 
       if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
-        // Double check to avoid redundant writes if credits are already zero
         if (userProfile.creditsUsed !== 0) {
           refreshAttemptedRef.current = true;
           const userRef = doc(db, 'users', user.uid);
@@ -62,13 +61,13 @@ export default function Dashboard() {
 
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(50));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
