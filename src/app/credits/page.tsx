@@ -121,7 +121,8 @@ export default function CreditsPage() {
             <CardContent>
               <p className="text-xs text-muted-foreground font-body">Cota Diária Nexus</p>
             </CardContent>
-          </div>
+          </Card>
+        </div>
 
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
