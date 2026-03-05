@@ -19,6 +19,9 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handlePermissionError = (error: FirestorePermissionError) => {
+      // Don't toast if we're already showing the quota overlay
+      if (isQuotaExceeded) return;
+      
       toast({
         variant: "destructive",
         title: "Protocolo Negado",
@@ -28,7 +31,7 @@ export function FirebaseErrorListener() {
 
     const handleFirestoreError = (error: FirestoreError) => {
       // Check for resource exhaustion (Quota Exceeded)
-      if (error.code === 'resource-exhausted' || error.message?.includes('quota')) {
+      if (error.code === 'resource-exhausted' || error.message?.toLowerCase().includes('quota')) {
         setIsQuotaExceeded(true);
       } else {
         toast({
@@ -46,7 +49,7 @@ export function FirebaseErrorListener() {
       errorEmitter.off('permission-error', handlePermissionError);
       errorEmitter.off('firestore-error', handleFirestoreError);
     };
-  }, [toast]);
+  }, [toast, isQuotaExceeded]);
 
   if (isQuotaExceeded) {
     return (
@@ -54,10 +57,10 @@ export function FirebaseErrorListener() {
         <Alert variant="destructive" className="max-w-md bg-card border-destructive/50 shadow-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <AlertCircle className="h-6 w-6 text-destructive" />
-            <AlertTitle className="text-xl font-headline font-bold m-0">Capacidade Máxima Atingida</AlertTitle>
+            <AlertTitle className="text-xl font-headline font-bold m-0 text-destructive">Capacidade Máxima Atingida</AlertTitle>
           </div>
           <AlertDescription className="space-y-4">
-            <p className="text-sm opacity-90 leading-relaxed font-body">
+            <p className="text-sm opacity-90 leading-relaxed font-body text-foreground">
               O BindNexus atingiu o limite de processamento diário permitido pelo provedor de infraestrutura (Firebase Free Tier). 
               Todas as operações de rede foram temporariamente suspensas para evitar perda de dados.
             </p>
@@ -66,7 +69,7 @@ export function FirebaseErrorListener() {
               <ul className="text-xs list-disc list-inside opacity-80 space-y-1">
                 <li>Aguarde o reset automático do Firebase (ciclo de 24h).</li>
                 <li>Considere reduzir a frequência de atualizações em tempo real.</li>
-                <li>Verifique se há atualizações de plano disponíveis.</li>
+                <li>Verifique se há atualizações de plano disponíveis no console.</li>
               </ul>
             </div>
             <Button 

@@ -61,16 +61,16 @@ export default function Dashboard() {
     }
   }, [userProfile, db, user]);
 
-  // Consultas limitadas para economizar cota de leitura do Firebase Spark
+  // Consultas estritamente limitadas para economizar cota de leitura do Firebase Spark
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(30));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(20));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(15));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(10));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -106,7 +106,7 @@ export default function Dashboard() {
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline text-foreground">Centro de Comando Nexus</h1>
           <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
         </header>
 
