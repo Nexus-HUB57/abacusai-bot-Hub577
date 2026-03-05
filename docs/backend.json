@@ -1,0 +1,49 @@
+
+{
+  "entities": {
+    "Nucleus": {
+      "title": "Nucleus",
+      "description": "A processing unit within the BindNexus network.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["primary", "secondary", "tertiary"] },
+        "status": { "type": "string", "enum": ["online", "syncing", "offline", "error"] },
+        "syncProgress": { "type": "number" },
+        "lastHeartbeat": { "type": "string", "format": "date-time" },
+        "lastSyncAt": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "userId"]
+    },
+    "BindCode": {
+      "title": "Bind Code",
+      "description": "A secure code used for linking system components.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "used", "expired"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["code", "userId"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/nuclei/{nucleusId}": {
+      "schema": "Nucleus",
+      "description": "Collection of system nuclei."
+    },
+    "/bindCodes/{bindCodeId}": {
+      "schema": "BindCode",
+      "description": "Collection of generated bind codes."
+    }
+  }
+}
