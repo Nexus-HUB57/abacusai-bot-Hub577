@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Copy, Check, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
 
 const CREDIT_COST = 1;
@@ -63,13 +62,13 @@ export function BindGenerator() {
         description: description || 'Generated via dashboard',
       };
 
-      // Non-blocking writes
+      // Non-blocking writes for better UX
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // Consume credit
-      updateDocumentNonBlocking(userRef, {
+      // Consume credit using set + merge to ensure it works even if the profile doc is missing
+      setDocumentNonBlocking(userRef, {
         creditsUsed: increment(CREDIT_COST)
-      });
+      }, { merge: true });
 
       // Log bind history
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {

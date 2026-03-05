@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -8,7 +7,7 @@ import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Key, Database, Zap } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
 import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -16,15 +15,15 @@ export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Sync user profile on first load
+  // Sync user profile on first load using non-blocking merge to avoid update errors
   useEffect(() => {
     if (user && db) {
       const userRef = doc(db, 'users', user.uid);
-      updateDocumentNonBlocking(userRef, {
+      setDocumentNonBlocking(userRef, {
         name: user.displayName || 'Anonymous User',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-      });
+      }, { merge: true });
     }
   }, [user, db]);
 
