@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Copy, Check, Save, Loader2, Zap } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save, Loader2, Zap, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
@@ -48,8 +48,21 @@ export function BindGenerator() {
       if (availableCredits < GENERATION_COST) {
         toast({
           variant: "destructive",
-          title: "Suprimento Insuficiente",
-          description: `Você não tem créditos suficientes. Você precisa de ${GENERATION_COST} crédito para gerar um novo bind. Saldo atual: ${availableCredits}`,
+          title: "Créditos Insuficientes",
+          description: (
+            <div className="flex flex-col gap-2 mt-2">
+              <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
+              <a 
+                href="https://manus.go.link/iW6sB?action=open-subscription" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold underline text-white hover:opacity-80 break-all"
+              >
+                https://manus.go.link/iW6sB?action=open-subscription
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ) as any,
         });
         setIsSaving(false);
         return;
@@ -94,7 +107,7 @@ export function BindGenerator() {
 
       toast({
         title: "Protocolo Inicializado",
-        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS} créditos individuais.`,
+        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos individuais.`,
       });
       
       setGeneratedCode('');
