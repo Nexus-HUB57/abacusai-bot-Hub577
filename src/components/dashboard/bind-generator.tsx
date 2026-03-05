@@ -11,7 +11,7 @@ import { collection, serverTimestamp, doc, increment } from 'firebase/firestore'
 
 const BIND_INITIAL_CREDITS = 40000;
 const USER_SUPPLY_QUOTA = 400000;
-const GENERATION_COST = 40000; // Updated: Generating a bind now "transfers" 40k from user supply
+const GENERATION_COST = 40000;
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -27,9 +27,12 @@ export function BindGenerator() {
     return doc(db, 'users', user.uid);
   }, [db, user]);
 
-  const { data: userProfile } = useDoc(userRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userRef);
 
-  const availableCredits = (userProfile?.monthlyCredits || USER_SUPPLY_QUOTA) - (userProfile?.creditsUsed || 0);
+  // Robust balance calculation
+  const creditsUsed = userProfile?.creditsUsed ?? 0;
+  const monthlyCredits = userProfile?.monthlyCredits ?? USER_SUPPLY_QUOTA;
+  const availableCredits = monthlyCredits - creditsUsed;
 
   const generate = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -44,6 +47,7 @@ export function BindGenerator() {
   const handleSave = async () => {
     if (!user || !generatedCode || !db) return;
 
+    // Strict credit check
     if (availableCredits < GENERATION_COST) {
       toast({
         variant: "destructive",
@@ -81,15 +85,15 @@ export function BindGenerator() {
         description: description || 'Bind de protocolo de alta entropia',
       };
 
-      // 1. Create the bind with 40,000 credits
+      // 1. Create the bind document with its individual 40,000 credit pool
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // 2. Deduct 40,000 from user daily supply
+      // 2. Deduct 40,000 from the user's global daily supply
       setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
-      // 3. Log history
+      // 3. Log the operation for auditing
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'CREATE_BIND',
@@ -109,7 +113,7 @@ export function BindGenerator() {
 
       toast({
         title: "Protocolo Inicializado",
-        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos.`,
+        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos no bind.`,
       });
       
       setGeneratedCode('');
@@ -133,8 +137,10 @@ export function BindGenerator() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isLowOnCredits = availableCredits < GENERATION_COST;
+
   return (
-    <Card className="w-full bg-card/50 border-border/50 backdrop-blur-sm">
+    <Card className="w-full bg-card/50 border-border/50 backdrop-blur-sm shadow-xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline">
           <RefreshCw className="w-5 h-5 text-accent" />
@@ -143,15 +149,15 @@ export function BindGenerator() {
         <div className="flex items-center justify-between">
           <CardDescription className="font-body flex items-center gap-2">
             <Zap className="w-3 h-3 text-yellow-500" />
-            Suprimento Nexus: {availableCredits.toLocaleString()} / {USER_SUPPLY_QUOTA.toLocaleString()}
+            Saldo Nexus Diário: {isProfileLoading ? '...' : Math.max(0, availableCredits).toLocaleString()}
           </CardDescription>
-          {availableCredits < GENERATION_COST && (
+          {isLowOnCredits && !isProfileLoading && (
             <a 
               href="https://manus.go.link/iW6sB?action=open-subscription" 
               target="_blank" 
-              className="text-[10px] text-accent hover:underline flex items-center gap-1 font-bold"
+              className="text-[10px] text-accent hover:underline flex items-center gap-1 font-bold animate-pulse"
             >
-              UPGRADE <ExternalLink className="w-2 h-2" />
+              FALTA CRÉDITOS? UPGRADE <ExternalLink className="w-2 h-2" />
             </a>
           )}
         </div>
@@ -163,10 +169,10 @@ export function BindGenerator() {
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
               placeholder="Gerar bind alfanumérico"
-              className="font-code text-xs bg-secondary/30 border-primary/20 h-12"
+              className="font-code text-xs bg-secondary/30 border-primary/20 h-12 tracking-wider"
             />
           </div>
-          <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90 px-6">
+          <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90 px-6 font-bold">
             Gerar
           </Button>
         </div>
@@ -184,33 +190,33 @@ export function BindGenerator() {
             onClick={copyToClipboard}
             disabled={!generatedCode || isSaving}
             variant="outline"
-            className="flex-1 border-accent/50 hover:bg-accent/10"
+            className="flex-1 border-accent/50 hover:bg-accent/10 h-11"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
             {copied ? 'Copiado' : 'Copiar Comando'}
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!generatedCode || isSaving}
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+            disabled={!generatedCode || isSaving || isLowOnCredits}
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 h-11 font-bold shadow-lg shadow-accent/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            {isSaving ? 'Registrando...' : 'Inicializar Bind'}
+            {isSaving ? 'Registrando...' : 'Inicializar Protocolo'}
           </Button>
         </div>
         
-        {availableCredits < GENERATION_COST && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-3 items-start">
-            <Info className="w-4 h-4 text-destructive mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-destructive uppercase tracking-wider">Suprimento Nexus Esgotado</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">
+        {isLowOnCredits && !isProfileLoading && (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-300">
+            <Info className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-destructive uppercase tracking-widest">Suprimento Esgotado</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.
               </p>
               <a 
                 href="https://manus.go.link/iW6sB?action=open-subscription" 
                 target="_blank" 
-                className="text-[10px] text-accent hover:underline font-bold block mt-1 break-all"
+                className="text-[11px] text-accent hover:underline font-bold block mt-1 break-all"
               >
                 https://manus.go.link/iW6sB?action=open-subscription
               </a>
