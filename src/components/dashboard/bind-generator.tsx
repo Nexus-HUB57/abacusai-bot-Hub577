@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -11,6 +10,7 @@ import { useFirestore, useUser, addDocumentNonBlocking, setDocumentNonBlocking }
 import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
 
 const BIND_INITIAL_CREDITS = 40000;
+const USER_SUPPLY_QUOTA = 400000;
 const GENERATION_COST = 1;
 
 export function BindGenerator() {
@@ -42,14 +42,14 @@ export function BindGenerator() {
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       
-      const userData = userSnap.exists() ? userSnap.data() : { monthlyCredits: 40000, creditsUsed: 0 };
-      const availableCredits = (userData.monthlyCredits || 40000) - (userData.creditsUsed || 0);
+      const userData = userSnap.exists() ? userSnap.data() : { monthlyCredits: USER_SUPPLY_QUOTA, creditsUsed: 0 };
+      const availableCredits = (userData.monthlyCredits || USER_SUPPLY_QUOTA) - (userData.creditsUsed || 0);
 
       if (availableCredits < GENERATION_COST) {
         toast({
           variant: "destructive",
-          title: "Insufficient User Credits",
-          description: `You need ${GENERATION_COST} credit to generate a new bind. Current balance: ${availableCredits}`,
+          title: "Insufficient User Supply",
+          description: `You need ${GENERATION_COST} credit to generate a new bind. Current supply: ${availableCredits}`,
         });
         setIsSaving(false);
         return;
@@ -70,7 +70,7 @@ export function BindGenerator() {
       // Register the new bind with its individual credit allocation
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // Consume 1 credit from user balance for the generation action
+      // Consume 1 credit from user daily supply for the generation action
       setDocumentNonBlocking(userRef, {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
@@ -127,7 +127,7 @@ export function BindGenerator() {
         </CardTitle>
         <CardDescription className="font-body flex items-center gap-2">
           <Zap className="w-3 h-3 text-yellow-500" />
-          Initial individual bind allocation: {BIND_INITIAL_CREDITS.toLocaleString()} credits
+          Daily system supply: {USER_SUPPLY_QUOTA.toLocaleString()} credits
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

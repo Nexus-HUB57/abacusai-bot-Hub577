@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -17,7 +16,15 @@ export default function Dashboard() {
   const db = useFirestore();
   const hasSyncedRef = useRef(false);
 
+  // User profile for telemetry
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: userProfile } = useDoc(userProfileRef);
+
   // Sync user profile on load with default credits if missing
+  // AND Implement the 24-hour credit refresh loop
   useEffect(() => {
     if (user && db && !hasSyncedRef.current) {
       hasSyncedRef.current = true;
@@ -26,18 +33,29 @@ export default function Dashboard() {
         name: user.displayName || 'Anonymous Nexus Node',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-        // Initialize standard quota if document is new or credits missing
-        monthlyCredits: 40000,
+        // Initialize supply if missing (400,000 credits)
+        monthlyCredits: 400000,
       }, { merge: true });
     }
   }, [user, db]);
 
-  // User profile for telemetry
-  const userProfileRef = useMemoFirebase(() => {
-    if (!user || !db) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
-  const { data: userProfile } = useDoc(userProfileRef);
+  // Credit Refresh Logic: Runs when userProfile loads
+  useEffect(() => {
+    if (userProfile && db && user) {
+      const now = new Date();
+      const lastRefresh = userProfile.lastCreditRefresh?.toDate?.() || new Date(0);
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+
+      if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
+        const userRef = doc(db, 'users', user.uid);
+        setDocumentNonBlocking(userRef, {
+          creditsUsed: 0,
+          lastCreditRefresh: serverTimestamp(),
+          monthlyCredits: 400000, // Ensure it stays at the target supply
+        }, { merge: true });
+      }
+    }
+  }, [userProfile, db, user]);
 
   // Real-time stats
   const bindsQuery = useMemoFirebase(() => {
@@ -65,13 +83,13 @@ export default function Dashboard() {
   if (isUserLoading) return null;
   if (!user) redirect('/auth');
 
-  const availableCredits = (userProfile?.monthlyCredits || 40000) - (userProfile?.creditsUsed || 0);
+  const availableCredits = (userProfile?.monthlyCredits || 400000) - (userProfile?.creditsUsed || 0);
 
   const stats = [
     { label: 'Network Binds', value: binds?.length || 0, icon: Key, color: 'text-accent' },
     { label: 'Active Nuclei', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
     { label: 'Sync Status', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
-    { label: 'Token Balance', value: availableCredits, icon: Wallet, color: 'text-green-500' },
+    { label: 'Daily Balance', value: availableCredits, icon: Wallet, color: 'text-green-500' },
   ];
 
   return (
@@ -80,7 +98,7 @@ export default function Dashboard() {
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Nexus Command Center</h1>
-          <p className="text-muted-foreground font-body">Orchestrate binds with individual credit allocations of 40,000.</p>
+          <p className="text-muted-foreground font-body">Orchestrate binds with a renewable daily supply of 400,000 credits.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

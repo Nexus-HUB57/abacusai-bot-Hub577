@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from 'react';
@@ -6,7 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, ArrowDownRight, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
@@ -24,7 +23,6 @@ export default function CreditsPage() {
 
   const creditsHistoryQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    // Align with schema: /users/{userId}/creditHistory
     return query(
       collection(db, 'users', user.uid, 'creditHistory'),
       orderBy('createdAt', 'desc')
@@ -35,7 +33,7 @@ export default function CreditsPage() {
 
   if (!user) return null;
 
-  const availableCredits = (profile?.monthlyCredits || 40000) - (profile?.creditsUsed || 0);
+  const availableCredits = (profile?.monthlyCredits || 400000) - (profile?.creditsUsed || 0);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -43,42 +41,45 @@ export default function CreditsPage() {
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Credit Management</h1>
-          <p className="text-muted-foreground font-body">Monitor your token balance and consumption history.</p>
+          <p className="text-muted-foreground font-body">Monitor your daily supply balance and consumption history.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-card/50 border-accent/20">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase font-semibold">Available Balance</CardDescription>
+              <CardDescription className="text-xs uppercase font-semibold">Available Supply</CardDescription>
               <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                 <Wallet className="w-6 h-6 text-accent" />
                 {profileLoading ? '...' : availableCredits.toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Monthly refresh active</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                24-hour refresh active
+              </p>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-primary/20">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase font-semibold">Used This Period</CardDescription>
+              <CardDescription className="text-xs uppercase font-semibold">Used Today</CardDescription>
               <CardTitle className="text-3xl font-bold font-headline">
                 {profileLoading ? '...' : (profile?.creditsUsed || 0).toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Total consumption this month</p>
+              <p className="text-xs text-muted-foreground">Consumption since last refresh</p>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase font-semibold">Allocated Quota</CardDescription>
+              <CardDescription className="text-xs uppercase font-semibold">Daily Quota</CardDescription>
               <CardTitle className="text-3xl font-bold font-headline">
-                {profileLoading ? '...' : (profile?.monthlyCredits || 40000).toLocaleString()}
+                {profileLoading ? '...' : (profile?.monthlyCredits || 400000).toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Standard Tier Allocation</p>
+              <p className="text-xs text-muted-foreground">Standard Nexus Allocation</p>
             </CardContent>
           </Card>
         </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -41,16 +40,15 @@ export default function AuthPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Update Firebase Auth profile
         await updateProfile(user, { displayName: name });
         
-        // Create initial user document in Firestore
         await setDoc(doc(db, 'users', user.uid), {
           name,
           email,
           createdAt: serverTimestamp(),
-          monthlyCredits: 40000,
+          monthlyCredits: 400000, // Updated to 400,000
           creditsUsed: 0,
+          lastCreditRefresh: serverTimestamp(),
         });
       }
       
