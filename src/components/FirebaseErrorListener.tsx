@@ -16,23 +16,20 @@ export function FirebaseErrorListener() {
   useEffect(() => {
     // Handle specific permission errors (often used for LLM debugging)
     const handlePermissionError = (error: FirestorePermissionError) => {
-      console.error('Permission Denied Context:', error.request);
       toast({
         variant: "destructive",
         title: "Protocolo Negado",
-        description: `Falha de permissão no caminho: ${error.request.path}. Certifique-se de estar autenticado corretamente.`,
+        description: `Falha de permissão no acesso aos dados. Certifique-se de estar autenticado corretamente.`,
       });
     };
 
     // Handle general Firestore errors (like Quota Exceeded)
     const handleFirestoreError = (error: FirestoreError) => {
-      console.error('Firestore Platform Error:', error.code, error.message);
-      
       if (error.code === 'resource-exhausted') {
         toast({
           variant: "destructive",
           title: "Cota de Rede Excedida",
-          description: "O limite de recursos do Firebase para este projeto foi atingido hoje. Por favor, tente novamente mais tarde.",
+          description: "O limite de recursos diários do Firebase (Plano Spark) foi atingido. O sistema voltará a operar no próximo ciclo de 24h.",
         });
       } else {
         toast({

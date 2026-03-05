@@ -33,7 +33,6 @@ export default function Dashboard() {
         name: user.displayName || 'Nodo Nexus Anônimo',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-        // Fornecimento inicial de 400.000 créditos se for novo
         monthlyCredits: 400000,
       }, { merge: true });
     }
@@ -47,13 +46,16 @@ export default function Dashboard() {
       const oneDayInMs = 24 * 60 * 60 * 1000;
 
       if (now.getTime() - lastRefresh.getTime() >= oneDayInMs) {
-        refreshAttemptedRef.current = true;
-        const userRef = doc(db, 'users', user.uid);
-        setDocumentNonBlocking(userRef, {
-          creditsUsed: 0,
-          lastCreditRefresh: serverTimestamp(),
-          monthlyCredits: 400000, 
-        }, { merge: true });
+        // Double check to avoid redundant writes if credits are already zero
+        if (userProfile.creditsUsed !== 0) {
+          refreshAttemptedRef.current = true;
+          const userRef = doc(db, 'users', user.uid);
+          setDocumentNonBlocking(userRef, {
+            creditsUsed: 0,
+            lastCreditRefresh: serverTimestamp(),
+            monthlyCredits: 400000, 
+          }, { merge: true });
+        }
       }
     }
   }, [userProfile, db, user]);
@@ -89,7 +91,7 @@ export default function Dashboard() {
     { label: 'Binds de Rede', value: binds?.length || 0, icon: Key, color: 'text-accent' },
     { label: 'Núcleos Ativos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
     { label: 'Sincronização', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
-    { label: 'Saldo Diário', value: availableCredits, icon: Wallet, color: 'text-green-500' },
+    { label: 'Saldo Diário', value: Math.max(0, availableCredits), icon: Wallet, color: 'text-green-500' },
   ];
 
   return (
