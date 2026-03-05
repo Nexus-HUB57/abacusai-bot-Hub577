@@ -12,6 +12,7 @@ import { collection, serverTimestamp, doc, increment } from 'firebase/firestore'
 const BIND_INITIAL_CREDITS = 40000;
 const USER_SUPPLY_QUOTA = 400000;
 const GENERATION_COST = 40000;
+const TELEGRAM_BOT_URL = "https://t.me/manus_ai_agent_bot";
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -29,7 +30,6 @@ export function BindGenerator() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userRef);
 
-  // Robust balance calculation
   const creditsUsed = userProfile?.creditsUsed ?? 0;
   const monthlyCredits = userProfile?.monthlyCredits ?? USER_SUPPLY_QUOTA;
   const availableCredits = monthlyCredits - creditsUsed;
@@ -47,7 +47,6 @@ export function BindGenerator() {
   const handleSave = async () => {
     if (!user || !generatedCode || !db) return;
 
-    // Strict credit check
     if (availableCredits < GENERATION_COST) {
       toast({
         variant: "destructive",
@@ -56,12 +55,12 @@ export function BindGenerator() {
           <div className="flex flex-col gap-2 mt-2">
             <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
             <a 
-              href="https://manus.go.link/iW6sB?action=open-subscription" 
+              href={TELEGRAM_BOT_URL} 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-bold underline text-white hover:opacity-80 break-all"
             >
-              https://manus.go.link/iW6sB?action=open-subscription
+              {TELEGRAM_BOT_URL}
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
@@ -85,15 +84,12 @@ export function BindGenerator() {
         description: description || 'Bind de protocolo de alta entropia',
       };
 
-      // 1. Create the bind document with its individual 40,000 credit pool
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // 2. Deduct 40,000 from the user's global daily supply
       setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
-      // 3. Log the operation for auditing
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'CREATE_BIND',
@@ -142,9 +138,9 @@ export function BindGenerator() {
   return (
     <Card className="w-full bg-card/50 border-border/50 backdrop-blur-sm shadow-xl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-headline">
+        <CardTitle className="flex items-center gap-2 font-headline text-lg">
           <RefreshCw className="w-5 h-5 text-accent" />
-          Gerador de Protocolo
+          Gerador de Protocolo Nexus
         </CardTitle>
         <div className="flex items-center justify-between">
           <CardDescription className="font-body flex items-center gap-2">
@@ -153,11 +149,11 @@ export function BindGenerator() {
           </CardDescription>
           {isLowOnCredits && !isProfileLoading && (
             <a 
-              href="https://manus.go.link/iW6sB?action=open-subscription" 
+              href={TELEGRAM_BOT_URL} 
               target="_blank" 
               className="text-[10px] text-accent hover:underline flex items-center gap-1 font-bold animate-pulse"
             >
-              FALTA CRÉDITOS? UPGRADE <ExternalLink className="w-2 h-2" />
+              FALTA CRÉDITOS? TELEGRAM <ExternalLink className="w-2 h-2" />
             </a>
           )}
         </div>
@@ -178,7 +174,7 @@ export function BindGenerator() {
         </div>
 
         <Input 
-          placeholder="Propósito / Descrição (Opcional)" 
+          placeholder="Propósito / Sincronização (Opcional)" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)}
           disabled={!generatedCode || isSaving}
@@ -214,11 +210,11 @@ export function BindGenerator() {
                 Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.
               </p>
               <a 
-                href="https://manus.go.link/iW6sB?action=open-subscription" 
+                href={TELEGRAM_BOT_URL} 
                 target="_blank" 
                 className="text-[11px] text-accent hover:underline font-bold block mt-1 break-all"
               >
-                https://manus.go.link/iW6sB?action=open-subscription
+                {TELEGRAM_BOT_URL}
               </a>
             </div>
           </div>

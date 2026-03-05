@@ -11,7 +11,8 @@ import {
   Wrench,
   Cpu,
   LogOut,
-  CreditCard
+  CreditCard,
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/firebase';
@@ -64,6 +65,15 @@ export function SidebarNav() {
             </Link>
           );
         })}
+        
+        <a 
+          href="https://t.me/manus_ai_agent_bot" 
+          target="_blank"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-accent transition-colors"
+        >
+          <Send className="w-5 h-5" />
+          Sincronizar Telegram
+        </a>
       </nav>
 
       <div className="p-4 border-t border-border space-y-1">

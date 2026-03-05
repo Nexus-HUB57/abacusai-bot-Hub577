@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, ExternalLink } from 'lucide-react';
+import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, ExternalLink, Send } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+
+const TELEGRAM_BOT_URL = "https://t.me/manus_ai_agent_bot";
 
 export default function CreditsPage() {
   const { user } = useUser();
@@ -60,7 +62,7 @@ export default function CreditsPage() {
         <header className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Gestão de Créditos</h1>
-            <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo.</p>
+            <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo Nexus.</p>
           </div>
           <div className="flex gap-3">
             <Button 
@@ -72,10 +74,10 @@ export default function CreditsPage() {
               <RefreshCw className="w-4 h-4" />
               Renovar Agora
             </Button>
-            <a href="https://manus.go.link/iW6sB?action=open-subscription" target="_blank">
+            <a href={TELEGRAM_BOT_URL} target="_blank">
               <Button size="sm" className="gap-2 bg-primary">
-                Inserir Créditos
-                <ExternalLink className="w-4 h-4" />
+                Sincronizar Telegram
+                <Send className="w-4 h-4" />
               </Button>
             </a>
           </div>
