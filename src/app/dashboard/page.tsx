@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
@@ -14,11 +14,12 @@ import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebas
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const hasSyncedRef = useRef(false);
 
   // Sync user profile on first load using non-blocking set with merge
-  // This avoids Permission Denied if the doc doesn't exist and we use updateDoc
   useEffect(() => {
-    if (user && db) {
+    if (user && db && !hasSyncedRef.current) {
+      hasSyncedRef.current = true;
       const userRef = doc(db, 'users', user.uid);
       setDocumentNonBlocking(userRef, {
         name: user.displayName || 'Anonymous User',
@@ -82,7 +83,7 @@ export default function Dashboard() {
             <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium font-body">{stat.label}</CardTitle>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                <stat.icon className={`w-4 h-4 ${stat.icon === Key ? 'text-accent' : stat.icon === Database ? 'text-primary' : stat.icon === Zap ? 'text-yellow-500' : 'text-green-500'}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold font-headline">{stat.value.toLocaleString()}</div>

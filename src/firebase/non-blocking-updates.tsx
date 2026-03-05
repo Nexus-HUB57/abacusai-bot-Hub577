@@ -10,14 +10,14 @@ import {
   SetOptions,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import {FirestorePermissionError, type SecurityRuleContext} from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 /**
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
-  // Determine if this is essentially a create or update for error reporting
+  // Determine if this is essentially a create or update for error reporting context
   const operation = options && ('merge' in options || 'mergeFields' in options) ? 'update' : 'create';
 
   setDoc(docRef, data, options || {}).catch(async (error) => {
@@ -29,7 +29,6 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
     errorEmitter.emit('permission-error', permissionError);
   });
 }
-
 
 /**
  * Initiates an addDoc operation for a collection reference.
@@ -47,7 +46,6 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
     });
 }
 
-
 /**
  * Initiates an updateDoc operation for a document reference.
  * Does NOT await the write operation internally.
@@ -63,7 +61,6 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
       errorEmitter.emit('permission-error', permissionError);
     });
 }
-
 
 /**
  * Initiates a deleteDoc operation for a document reference.
