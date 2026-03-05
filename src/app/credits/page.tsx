@@ -31,7 +31,7 @@ export default function CreditsPage() {
     return query(
       collection(db, 'users', user.uid, 'creditHistory'),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(20)
     );
   }, [db, user]);
 
@@ -72,11 +72,11 @@ export default function CreditsPage() {
               className="gap-2 border-accent/30 text-accent"
             >
               <RefreshCw className="w-4 h-4" />
-              Renovar Agora
+              Renovar Cota
             </Button>
             <a href={TELEGRAM_BOT_URL} target="_blank">
               <Button size="sm" className="gap-2 bg-primary">
-                Sincronizar Telegram
+                Inserir Créditos
                 <Send className="w-4 h-4" />
               </Button>
             </a>
@@ -84,18 +84,18 @@ export default function CreditsPage() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-card/50 border-accent/20">
+          <Card className="bg-card/50 border-accent/20 shadow-lg shadow-accent/5">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs uppercase font-semibold">Suprimento Disponível</CardDescription>
               <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                 <Wallet className="w-6 h-6 text-accent" />
-                {profileLoading ? '...' : availableCredits.toLocaleString()}
+                {profileLoading ? '...' : Math.max(0, availableCredits).toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Refresh automático em 24h
+                Refresh em 24h
               </p>
             </CardContent>
           </Card>
@@ -107,29 +107,29 @@ export default function CreditsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Consumo desde o último refresh</p>
+              <p className="text-xs text-muted-foreground font-body">Consumo de rede atual</p>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase font-semibold">Cota Diária</CardDescription>
+              <CardDescription className="text-xs uppercase font-semibold">Limite Padrão</CardDescription>
               <CardTitle className="text-3xl font-bold font-headline">
                 {profileLoading ? '...' : (profile?.monthlyCredits || 400000).toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Alocação Padrão Nexus</p>
+              <p className="text-xs text-muted-foreground font-body">Cota Diária Nexus</p>
             </CardContent>
           </Card>
         </div>
 
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-headline">
+            <CardTitle className="flex items-center gap-2 font-headline text-lg">
               <CreditCard className="w-5 h-5 text-accent" />
-              Log de Consumo
+              Log de Auditoria
             </CardTitle>
-            <CardDescription className="font-body">Registro detalhado de todas as operações que consomem créditos.</CardDescription>
+            <CardDescription className="font-body">Histórico de operações que impactaram o seu suprimento.</CardDescription>
           </CardHeader>
           <CardContent>
             {historyLoading ? (
@@ -156,13 +156,13 @@ export default function CreditsPage() {
                       </TableCell>
                       <TableCell className="font-medium font-body uppercase tracking-wider text-xs">
                         <Badge variant="outline" className="border-accent/20 text-accent">
-                          {h.action?.replace(/_/g, ' ') || 'AÇÃO'}
+                          {h.action?.replace(/_/g, ' ') || 'OPERAÇÃO'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 font-bold text-destructive">
                           <ArrowDownRight className="w-3 h-3" />
-                          {h.creditsUsed}
+                          {h.creditsUsed?.toLocaleString()}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground font-body text-sm">
@@ -174,7 +174,7 @@ export default function CreditsPage() {
               </Table>
             ) : (
               <div className="text-center py-20 text-muted-foreground font-body">
-                Nenhum histórico de crédito encontrado. Comece a gerar binds para ver registros.
+                Nenhum registro de consumo encontrado. Inicie protocolos para ver dados.
               </div>
             )}
           </CardContent>

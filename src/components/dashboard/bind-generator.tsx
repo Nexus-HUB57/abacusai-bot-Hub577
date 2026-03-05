@@ -50,10 +50,10 @@ export function BindGenerator() {
     if (availableCredits < GENERATION_COST) {
       toast({
         variant: "destructive",
-        title: "Créditos Insuficientes",
+        title: "Suprimento Insuficiente",
         description: (
           <div className="flex flex-col gap-2 mt-2">
-            <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
+            <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade no Telegram para continuar.</p>
             <a 
               href={TELEGRAM_BOT_URL} 
               target="_blank" 
@@ -86,30 +86,31 @@ export function BindGenerator() {
 
       addDocumentNonBlocking(bindCodesRef, newBind);
       
+      // Update user daily supply
       setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
+      // Audit logs
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
-        action: 'CREATE_BIND',
+        action: 'INITIALIZE_BIND',
         bindCode: generatedCode,
-        creditsAllocated: BIND_INITIAL_CREDITS,
         status: 'confirmed',
         createdAt: serverTimestamp(),
       });
 
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'creditHistory'), {
         ownerId: user.uid,
-        action: 'CONSUME_CREDIT',
+        action: 'CONSUME_SUPPLY',
         creditsUsed: GENERATION_COST,
-        description: `Protocolo :bind ${generatedCode} inicializado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos.`,
+        description: `Protocolo :bind ${generatedCode} inicializado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos internos.`,
         createdAt: serverTimestamp(),
       });
 
       toast({
-        title: "Protocolo Inicializado",
-        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos no bind.`,
+        title: "Protocolo Ativado",
+        description: `Código :bind ${generatedCode} registrado com sucesso.`,
       });
       
       setGeneratedCode('');
@@ -117,7 +118,7 @@ export function BindGenerator() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erro de Inicialização",
+        title: "Erro de Ativação",
         description: error.message,
       });
     } finally {
@@ -145,7 +146,7 @@ export function BindGenerator() {
         <div className="flex items-center justify-between">
           <CardDescription className="font-body flex items-center gap-2">
             <Zap className="w-3 h-3 text-yellow-500" />
-            Saldo Nexus Diário: {isProfileLoading ? '...' : Math.max(0, availableCredits).toLocaleString()}
+            Suprimento Diário: {isProfileLoading ? '...' : Math.max(0, availableCredits).toLocaleString()}
           </CardDescription>
           {isLowOnCredits && !isProfileLoading && (
             <a 
@@ -153,7 +154,7 @@ export function BindGenerator() {
               target="_blank" 
               className="text-[10px] text-accent hover:underline flex items-center gap-1 font-bold animate-pulse"
             >
-              FALTA CRÉDITOS? TELEGRAM <ExternalLink className="w-2 h-2" />
+              RECARREGAR NO TELEGRAM <ExternalLink className="w-2 h-2" />
             </a>
           )}
         </div>
@@ -164,7 +165,7 @@ export function BindGenerator() {
             <Input
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
-              placeholder="Gerar bind alfanumérico"
+              placeholder="Aguardando geração..."
               className="font-code text-xs bg-secondary/30 border-primary/20 h-12 tracking-wider"
             />
           </div>
@@ -174,7 +175,7 @@ export function BindGenerator() {
         </div>
 
         <Input 
-          placeholder="Propósito / Sincronização (Opcional)" 
+          placeholder="Descrição / Sincronização (Opcional)" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)}
           disabled={!generatedCode || isSaving}
@@ -189,7 +190,7 @@ export function BindGenerator() {
             className="flex-1 border-accent/50 hover:bg-accent/10 h-11"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? 'Copiado' : 'Copiar Comando'}
+            {copied ? 'Copiado' : 'Copiar :bind'}
           </Button>
           <Button
             onClick={handleSave}
@@ -197,7 +198,7 @@ export function BindGenerator() {
             className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 h-11 font-bold shadow-lg shadow-accent/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            {isSaving ? 'Registrando...' : 'Inicializar Protocolo'}
+            {isSaving ? 'Processando...' : 'Ativar Protocolo'}
           </Button>
         </div>
         
@@ -205,7 +206,7 @@ export function BindGenerator() {
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-300">
             <Info className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
             <div className="space-y-1.5">
-              <p className="text-xs font-bold text-destructive uppercase tracking-widest">Suprimento Esgotado</p>
+              <p className="text-xs font-bold text-destructive uppercase tracking-widest">Saldo Esgotado</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.
               </p>
