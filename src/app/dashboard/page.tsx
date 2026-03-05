@@ -16,7 +16,7 @@ export default function Dashboard() {
   const db = useFirestore();
   const syncAttemptedRef = useRef(false);
 
-  // Profile ref (stable)
+  // Referência estável do Perfil (Evita re-inscritos desnecessários)
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
@@ -24,7 +24,7 @@ export default function Dashboard() {
   
   const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
-  // Highly optimized Sync Logic: Prevents redundant writes using session storage and refs
+  // Lógica de Sincronização Otimizada: Evita loops de gravação
   useEffect(() => {
     if (user && db && userProfile && !syncAttemptedRef.current) {
       const sessionKey = `nexus_synced_${user.uid}`;
@@ -40,7 +40,7 @@ export default function Dashboard() {
       const oneDayInMs = 24 * 60 * 60 * 1000;
       const needsRefresh = now.getTime() - lastRefresh.getTime() >= oneDayInMs;
 
-      // Only perform a write if profile is missing key fields or needs credit refresh
+      // Só grava se o perfil estiver incompleto ou precisar de refresh de 24h
       if (needsRefresh || userProfile.monthlyCredits === undefined) {
         syncAttemptedRef.current = true;
         sessionStorage.setItem(sessionKey, 'true');
@@ -57,16 +57,16 @@ export default function Dashboard() {
     }
   }, [user, db, userProfile]);
 
-  // Heavily limited queries to conserve Spark Plan quota
+  // Consultas limitadas ao mínimo possível para economizar cota de leitura
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(5));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(3));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), limit(5));
+    return query(collection(db, 'users', user.uid, 'nuclei'), limit(3));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -101,7 +101,7 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-background text-foreground">
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
-        <header className="mb-8">
+        <header className="mb-8 text-center lg:text-left">
           <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
           <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
         </header>

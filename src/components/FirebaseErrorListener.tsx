@@ -10,15 +10,16 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
- * A centralized component that listens for Firestore-related errors
- * and surfaces them to the user via Toasts and a global overlay for critical errors.
+ * Ouvinte centralizado de erros do Firebase.
+ * Detecta especificamente o erro de 'resource-exhausted' (Quota Exceeded)
+ * e apresenta uma interface de bloqueio total para o usuário.
  */
 export function FirebaseErrorListener() {
   const { toast } = useToast();
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
 
   useEffect(() => {
-    // Check if we already hit the quota in this session
+    // Verifica se já atingimos a cota nesta sessão
     const quotaHit = sessionStorage.getItem('nexus_quota_exceeded');
     if (quotaHit) setIsQuotaExceeded(true);
 
@@ -33,7 +34,7 @@ export function FirebaseErrorListener() {
     };
 
     const handleFirestoreError = (error: FirestoreError) => {
-      // Check for resource exhaustion (Quota Exceeded)
+      // Verifica se o recurso foi exaurido (Plano Spark do Firebase)
       if (error.code === 'resource-exhausted' || error.message?.toLowerCase().includes('quota')) {
         setIsQuotaExceeded(true);
         sessionStorage.setItem('nexus_quota_exceeded', 'true');
@@ -57,7 +58,7 @@ export function FirebaseErrorListener() {
 
   if (isQuotaExceeded) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-md flex items-center justify-center p-4 overflow-auto">
+      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex items-center justify-center p-4 overflow-auto">
         <Alert variant="destructive" className="max-w-md bg-card border-destructive/50 shadow-2xl p-8 space-y-6">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -69,25 +70,29 @@ export function FirebaseErrorListener() {
           </div>
           
           <AlertDescription className="space-y-6">
-            <p className="text-base text-center opacity-90 leading-relaxed font-body text-foreground">
-              O BindNexus atingiu o limite de processamento diário gratuito permitido pelo Firebase (Spark Plan). 
-              O sistema entrará em modo de espera até o próximo ciclo.
-            </p>
+            <div className="space-y-4 text-center">
+              <p className="text-base leading-relaxed font-body text-foreground">
+                O BindNexus atingiu o limite de processamento gratuito diário permitido pelo Google (Spark Plan).
+              </p>
+              <p className="text-sm opacity-80 font-body text-foreground">
+                O sistema entrará em hibernação automática até o próximo ciclo de atualização (aproximadamente 24h).
+              </p>
+            </div>
             
             <div className="space-y-3 p-4 bg-secondary/30 rounded-xl border border-border/50">
               <p className="text-xs font-bold uppercase tracking-widest opacity-70 text-center">Status do Protocolo</p>
               <ul className="text-xs space-y-2 opacity-80">
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                  Operações suspensas temporariamente
+                  Operações de leitura/escrita suspensas
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                  Reset automático em aproximadamente 24h
+                  Sincronização de rede em modo de espera
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                  Sincronização de rede em pausa
+                  Reset diário pendente (Google Cloud)
                 </li>
               </ul>
             </div>
@@ -105,7 +110,7 @@ export function FirebaseErrorListener() {
             </Button>
             
             <p className="text-[10px] text-center text-muted-foreground italic">
-              Dica: Reduza a frequência de criação de binds para evitar novos bloqueios.
+              Nota: Isso não afeta seus créditos do Nexus, apenas a infraestrutura do banco de dados.
             </p>
           </AlertDescription>
         </Alert>
