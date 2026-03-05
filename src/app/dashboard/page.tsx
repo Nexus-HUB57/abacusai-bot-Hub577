@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -6,6 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Activity, Key, Database, Zap, Wallet, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';

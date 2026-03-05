@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -35,7 +34,7 @@ export default function NucleusMonitoringPage() {
     return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
   }, [db, user]);
 
-  const { data: nucleuses, isLoading } = useCollection(nucleusesQuery);
+  const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
 
   const stats = useMemo(() => {
     if (!nucleuses) return { online: 0, syncing: 0, offline: 0, total: 0 };
