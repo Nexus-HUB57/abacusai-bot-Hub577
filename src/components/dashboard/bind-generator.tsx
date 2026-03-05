@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -30,9 +31,10 @@ export function BindGenerator() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userRef);
 
+  // Garantindo que os créditos sejam lidos corretamente
   const creditsUsed = userProfile?.creditsUsed ?? 0;
   const monthlyCredits = userProfile?.monthlyCredits ?? USER_SUPPLY_QUOTA;
-  const availableCredits = monthlyCredits - creditsUsed;
+  const availableCredits = Math.max(0, monthlyCredits - creditsUsed);
 
   const generate = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -53,7 +55,7 @@ export function BindGenerator() {
         title: "Suprimento Insuficiente",
         description: (
           <div className="flex flex-col gap-2 mt-2">
-            <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade no Telegram para continuar.</p>
+            <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
             <a 
               href={TELEGRAM_BOT_URL} 
               target="_blank" 
@@ -81,36 +83,38 @@ export function BindGenerator() {
         remainingCredits: BIND_INITIAL_CREDITS,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
-        description: description || 'Bind de protocolo de alta entropia',
+        description: description || 'Protocolo de alta entropia sincronizado',
       };
 
+      // 1. Cria o bind com seus créditos específicos
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // Update user daily supply
+      // 2. Deduz da cota diária do usuário
       setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
-      // Audit logs
+      // 3. Registra auditoria
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'INITIALIZE_BIND',
         bindCode: generatedCode,
         status: 'confirmed',
+        creditsAllocated: BIND_INITIAL_CREDITS,
         createdAt: serverTimestamp(),
       });
 
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'creditHistory'), {
         ownerId: user.uid,
-        action: 'CONSUME_SUPPLY',
+        action: 'ALLOCATE_BIND_CREDITS',
         creditsUsed: GENERATION_COST,
-        description: `Protocolo :bind ${generatedCode} inicializado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos internos.`,
+        description: `Injetado ${BIND_INITIAL_CREDITS.toLocaleString()} créditos no bind :${generatedCode}`,
         createdAt: serverTimestamp(),
       });
 
       toast({
         title: "Protocolo Ativado",
-        description: `Código :bind ${generatedCode} registrado com sucesso.`,
+        description: `Código :bind ${generatedCode} registrado com 40.000 créditos.`,
       });
       
       setGeneratedCode('');
@@ -146,7 +150,7 @@ export function BindGenerator() {
         <div className="flex items-center justify-between">
           <CardDescription className="font-body flex items-center gap-2">
             <Zap className="w-3 h-3 text-yellow-500" />
-            Suprimento Diário: {isProfileLoading ? '...' : Math.max(0, availableCredits).toLocaleString()}
+            Suprimento Diário: {isProfileLoading ? '...' : availableCredits.toLocaleString()}
           </CardDescription>
           {isLowOnCredits && !isProfileLoading && (
             <a 
@@ -175,7 +179,7 @@ export function BindGenerator() {
         </div>
 
         <Input 
-          placeholder="Descrição / Sincronização (Opcional)" 
+          placeholder="Descrição (Opcional)" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)}
           disabled={!generatedCode || isSaving}
@@ -208,7 +212,7 @@ export function BindGenerator() {
             <div className="space-y-1.5">
               <p className="text-xs font-bold text-destructive uppercase tracking-widest">Saldo Esgotado</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.
+                Você não tem créditos suficientes para este protocolo. Por favor, faça upgrade através do bot no Telegram.
               </p>
               <a 
                 href={TELEGRAM_BOT_URL} 

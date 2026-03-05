@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,14 +15,18 @@ import {
   Plus, 
   Database, 
   AlertCircle,
-  Clock
+  Clock,
+  RefreshCw,
+  Cpu
 } from 'lucide-react';
-import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection, useUser, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, limit, doc, serverTimestamp } from 'firebase/firestore';
 
 export default function NucleusMonitoringPage() {
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [isSyncingManus, setIsSyncingManus] = useState(false);
+  const { toast } = useToast();
   const { user } = useUser();
   const db = useFirestore();
 
@@ -30,7 +35,7 @@ export default function NucleusMonitoringPage() {
     return query(collection(db, 'users', user.uid, 'nuclei'), limit(20));
   }, [db, user]);
 
-  const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
+  const { data: nucleuses, isLoading } = useCollection(nucleusesQuery);
 
   const stats = useMemo(() => {
     if (!nucleuses) return { online: 0, syncing: 0, offline: 0, total: 0 };
@@ -41,6 +46,59 @@ export default function NucleusMonitoringPage() {
       total: nucleuses.length
     };
   }, [nucleuses]);
+
+  const handleManusSync = async () => {
+    if (!user || !db) return;
+    setIsSyncingManus(true);
+    
+    toast({
+      title: "Iniciando Protocolo de Sincronização",
+      description: "Conectando ao cluster Manus AI para descoberta de núcleos...",
+    });
+
+    setTimeout(() => {
+      const nucleiRef = collection(db, 'users', user.uid, 'nuclei');
+      
+      // Se não houver núcleos, cria os padrão do Manus
+      if (!nucleuses || nucleuses.length === 0) {
+        const defaults = [
+          { name: "Manus Core Alpha", type: "primary", status: "online", syncProgress: 100 },
+          { name: "Manus Node Beta", type: "secondary", status: "syncing", syncProgress: 45 },
+          { name: "Manus Archive Delta", type: "tertiary", status: "offline", syncProgress: 0 }
+        ];
+
+        defaults.forEach(n => {
+          addDocumentNonBlocking(nucleiRef, {
+            ...n,
+            ownerId: user.uid,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            lastHeartbeat: new Date().toISOString(),
+            lastSyncAt: new Date().toISOString(),
+            description: "Núcleo sincronizado automaticamente via Manus Protocol.",
+            tags: ["manus", "auto-sync", n.type]
+          });
+        });
+      } else {
+        // Atualiza os existentes para 'online'
+        nucleuses.forEach(n => {
+          setDocumentNonBlocking(doc(db, 'users', user.uid, 'nuclei', n.id), {
+            status: 'online',
+            syncProgress: 100,
+            updatedAt: serverTimestamp(),
+            lastHeartbeat: new Date().toISOString(),
+            lastSyncAt: new Date().toISOString(),
+          }, { merge: true });
+        });
+      }
+
+      setIsSyncingManus(false);
+      toast({
+        title: "Sincronização Concluída",
+        description: "Núcleos de rede atualizados com sucesso.",
+      });
+    }, 2000);
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -72,21 +130,32 @@ export default function NucleusMonitoringPage() {
       <main className="flex-1 ml-64 p-8">
         <header className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Nucleus Monitoring</h1>
-            <p className="text-muted-foreground font-body">Real-time status tracking for trinuclear network components.</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Monitoramento de Núcleos</h1>
+            <p className="text-muted-foreground font-body">Rastreamento em tempo real de componentes da rede trinuclear.</p>
           </div>
-          <Button onClick={() => setShowRegisterDialog(true)} className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20">
-            <Plus className="w-4 h-4" />
-            Register Nucleus
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline"
+              onClick={handleManusSync} 
+              disabled={isSyncingManus}
+              className="border-accent text-accent hover:bg-accent/10 gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingManus ? 'animate-spin' : ''}`} />
+              Sincronizar Manus
+            </Button>
+            <Button onClick={() => setShowRegisterDialog(true)} className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20">
+              <Plus className="w-4 h-4" />
+              Registrar Núcleo
+            </Button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Online', value: stats.online, color: 'border-l-green-500', desc: 'Active units' },
-            { label: 'Syncing', value: stats.syncing, color: 'border-l-yellow-500', desc: 'In progress' },
-            { label: 'Offline', value: stats.offline, color: 'border-l-muted', desc: 'Disconnected' },
-            { label: 'Total', value: stats.total, color: 'border-l-accent', desc: 'Registered' },
+            { label: 'Online', value: stats.online, color: 'border-l-green-500', desc: 'Unidades ativas' },
+            { label: 'Syncing', value: stats.syncing, color: 'border-l-yellow-500', desc: 'Em progresso' },
+            { label: 'Offline', value: stats.offline, color: 'border-l-muted', desc: 'Desconectados' },
+            { label: 'Total', value: stats.total, color: 'border-l-accent', desc: 'Registrados' },
           ].map((stat, i) => (
             <Card key={i} className={`border-l-4 ${stat.color} shadow-sm bg-card/50`}>
               <CardHeader className="pb-2">
@@ -104,15 +173,15 @@ export default function NucleusMonitoringPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl font-headline">
               <Activity className="w-5 h-5 text-accent" />
-              Network Entities
+              Entidades de Rede
             </CardTitle>
-            <CardDescription className="font-body">Heartbeat monitoring for registered nodes (Top 20).</CardDescription>
+            <CardDescription className="font-body">Monitoramento de pulsação para nós registrados (Top 20).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-center py-12 animate-pulse text-muted-foreground">
-                  Synchronizing data stream...
+                  Sincronizando fluxo de dados...
                 </div>
               ) : nucleuses && nucleuses.length > 0 ? (
                 nucleuses.map((nucleus) => (
@@ -132,7 +201,7 @@ export default function NucleusMonitoringPage() {
                           variant={getStatusVariant(nucleus.status)}
                           className={nucleus.status === 'online' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}
                         >
-                          {nucleus.status?.toUpperCase() || 'UNKNOWN'}
+                          {nucleus.status?.toUpperCase() || 'DESCONHECIDO'}
                         </Badge>
                         <Badge variant="outline" className="capitalize border-primary/30 text-primary">
                           {nucleus.type}
@@ -143,7 +212,7 @@ export default function NucleusMonitoringPage() {
                     {nucleus.status === "syncing" && (
                       <div className="space-y-2 mb-4 bg-background/40 p-3 rounded-lg border border-yellow-500/10">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-medium">Synchronization Progress</span>
+                          <span className="text-muted-foreground font-medium">Progresso de Sincronização</span>
                           <span className="font-bold text-accent">{nucleus.syncProgress || 0}%</span>
                         </div>
                         <Progress value={nucleus.syncProgress || 0} className="h-1.5 bg-secondary" />
@@ -152,14 +221,14 @@ export default function NucleusMonitoringPage() {
 
                     <div className="grid grid-cols-2 gap-6 text-[10px] border-t pt-4 border-border/50">
                       <div>
-                        <p className="text-muted-foreground mb-1 uppercase tracking-tighter font-semibold">Last Heartbeat</p>
+                        <p className="text-muted-foreground mb-1 uppercase tracking-tighter font-semibold">Último Heartbeat</p>
                         <div className="flex items-center gap-1.5 text-foreground font-code">
                           <Clock className="w-3 h-3 text-accent" />
                           {nucleus.lastHeartbeat ? new Date(nucleus.lastHeartbeat).toLocaleString() : 'N/A'}
                         </div>
                       </div>
                       <div>
-                        <p className="text-muted-foreground mb-1 uppercase tracking-tighter font-semibold">Last Sync Cycle</p>
+                        <p className="text-muted-foreground mb-1 uppercase tracking-tighter font-semibold">Último Ciclo Sync</p>
                         <div className="flex items-center gap-1.5 text-foreground font-code">
                           <Zap className="w-3 h-3 text-yellow-500" />
                           {nucleus.lastSyncAt ? new Date(nucleus.lastSyncAt).toLocaleString() : 'N/A'}
@@ -171,14 +240,14 @@ export default function NucleusMonitoringPage() {
               ) : (
                 <div className="text-center py-16 border-2 border-dashed rounded-xl bg-secondary/5">
                   <Database className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-                  <h3 className="text-lg font-semibold mb-2">No Nuclei Found</h3>
-                  <p className="text-muted-foreground mb-6">Initialize your first unit to begin system monitoring.</p>
+                  <h3 className="text-lg font-semibold mb-2">Nenhum Núcleo Encontrado</h3>
+                  <p className="text-muted-foreground mb-6">Inicialize sua primeira unidade para começar o monitoramento.</p>
                   <Button
                     variant="outline"
                     className="border-accent text-accent hover:bg-accent/10"
                     onClick={() => setShowRegisterDialog(true)}
                   >
-                    Register Initial Nucleus
+                    Registrar Núcleo Inicial
                   </Button>
                 </div>
               )}

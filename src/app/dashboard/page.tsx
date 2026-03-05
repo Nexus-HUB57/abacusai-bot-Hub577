@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -16,7 +17,6 @@ export default function Dashboard() {
   const db = useFirestore();
   const syncAttemptedRef = useRef(false);
 
-  // Referência estável do Perfil (Evita re-inscritos desnecessários)
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
@@ -24,7 +24,6 @@ export default function Dashboard() {
   
   const { data: userProfile, isLoading: profileLoading } = useDoc(userProfileRef);
 
-  // Lógica de Sincronização Otimizada: Evita loops de gravação
   useEffect(() => {
     if (user && db && userProfile && !syncAttemptedRef.current) {
       const sessionKey = `nexus_synced_${user.uid}`;
@@ -40,7 +39,6 @@ export default function Dashboard() {
       const oneDayInMs = 24 * 60 * 60 * 1000;
       const needsRefresh = now.getTime() - lastRefresh.getTime() >= oneDayInMs;
 
-      // Só grava se o perfil estiver incompleto ou precisar de refresh de 24h
       if (needsRefresh || userProfile.monthlyCredits === undefined) {
         syncAttemptedRef.current = true;
         sessionStorage.setItem(sessionKey, 'true');
@@ -51,16 +49,15 @@ export default function Dashboard() {
           lastSignedIn: serverTimestamp(),
           monthlyCredits: 400000,
           creditsUsed: needsRefresh ? 0 : (userProfile.creditsUsed ?? 0),
-          lastCreditRefresh: needsRefresh ? serverTimestamp() : (userProfile.lastCreditRefresh ?? serverTimestamp()),
+          lastCreditRefresh: serverTimestamp(),
         }, { merge: true });
       }
     }
   }, [user, db, userProfile]);
 
-  // Consultas limitadas ao mínimo possível para economizar cota de leitura
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), limit(3));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), orderBy('createdAt', 'desc'), limit(3));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
@@ -93,9 +90,14 @@ export default function Dashboard() {
   const stats = [
     { label: 'Binds Ativos', value: binds?.length || 0, icon: Key, color: 'text-accent' },
     { label: 'Núcleos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Sync Status', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Sync Status', value: statsStatus(nuclei), icon: Zap, color: 'text-yellow-500' },
     { label: 'Saldo Diário', value: Math.max(0, availableCredits), icon: Wallet, color: 'text-green-500' },
   ];
+
+  function statsStatus(n: any) {
+    if (!n) return 0;
+    return n.filter((item: any) => item.status === 'online' || item.status === 'syncing').length;
+  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -147,15 +149,22 @@ export default function Dashboard() {
                         }`} />
                         <div>
                           <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
-                          <p className="text-[10px] text-muted-foreground font-body uppercase">
-                            {log.action?.replace(/_/g, ' ')}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] text-muted-foreground font-body uppercase">
+                              {log.action?.replace(/_/g, ' ')}
+                            </p>
+                            {log.creditsAllocated && (
+                              <Badge variant="outline" className="text-[8px] h-4 bg-primary/10 border-primary/20 text-primary">
+                                +{log.creditsAllocated.toLocaleString()} CR
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-code">
                         {log.createdAt?.seconds 
                           ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() 
-                          : 'Recent'}
+                          : 'Recente'}
                       </span>
                     </div>
                   ))
