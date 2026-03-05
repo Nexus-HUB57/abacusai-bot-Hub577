@@ -18,20 +18,21 @@ import {
   Clock
 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 export default function NucleusMonitoringPage() {
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const { user } = useUser();
   const db = useFirestore();
 
-  const nucleiQuery = useMemo(() => {
+  const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'nuclei'), where('userId', '==', user.uid));
+    // Align with schema: /users/{userId}/nuclei
+    return query(collection(db, 'users', user.uid, 'nuclei'));
   }, [db, user]);
 
-  const { data: nucleuses, loading } = useCollection(nucleiQuery);
+  const { data: nucleuses, isLoading } = useCollection(nucleiQuery);
 
   const stats = useMemo(() => {
     if (!nucleuses) return { online: 0, syncing: 0, offline: 0, total: 0 };
@@ -111,7 +112,7 @@ export default function NucleusMonitoringPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {loading ? (
+              {isLoading ? (
                 <div className="text-center py-12 animate-pulse text-muted-foreground">
                   Synchronizing data stream...
                 </div>

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { History, ArrowRight, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function BindHistoryPage() {
   const { user } = useUser();
@@ -16,9 +16,9 @@ export default function BindHistoryPage() {
 
   const historyQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
+    // Ownership is guaranteed by the path /users/{userId}/bindHistory
     return query(
       collection(db, 'users', user.uid, 'bindHistory'),
-      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
   }, [db, user]);

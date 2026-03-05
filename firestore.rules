@@ -10,18 +10,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Allow the user to read and write their own profile and all subcollections
       allow read, write: if isOwner(userId);
 
-      match /nuclei/{nucleusId} {
-        allow read, write: if isOwner(userId);
-      }
-      match /bindCodes/{bindCodeId} {
-        allow read, write: if isOwner(userId);
-      }
-      match /creditHistory/{logId} {
-        allow read, write: if isOwner(userId);
-      }
-      match /bindHistory/{logId} {
+      match /{allPaths=**} {
         allow read, write: if isOwner(userId);
       }
     }

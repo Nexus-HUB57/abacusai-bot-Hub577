@@ -41,7 +41,7 @@ export function RegisterNucleusDialog({ open, onOpenChange }: RegisterNucleusDia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
+    if (!user || !db) {
       toast({
         variant: "destructive",
         title: "Authentication Required",
@@ -60,14 +60,16 @@ export function RegisterNucleusDialog({ open, onOpenChange }: RegisterNucleusDia
     }
 
     setIsLoading(true);
-    const nucleiRef = collection(db, 'nuclei');
+    // Correct path: /users/{userId}/nuclei
+    const nucleiRef = collection(db, 'users', user.uid, 'nuclei');
     const newNucleus = {
       name: name.trim(),
       type,
       status: 'offline',
       syncProgress: 0,
-      userId: user.uid,
+      ownerId: user.uid,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       tags: [],
       description: '',
     };

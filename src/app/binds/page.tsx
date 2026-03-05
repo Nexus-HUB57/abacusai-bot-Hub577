@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Key, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function BindsPage() {
   const { user } = useUser();
@@ -19,7 +19,6 @@ export default function BindsPage() {
     if (!user || !db) return null;
     return query(
       collection(db, 'users', user.uid, 'bindCodes'),
-      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
   }, [db, user]);

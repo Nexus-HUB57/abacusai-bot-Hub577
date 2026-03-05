@@ -10,7 +10,7 @@ import { Activity, Key, Database, Zap } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
-import { collection, query, where, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -38,13 +38,13 @@ export default function Dashboard() {
   // Stats queries
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'bindCodes'), where('ownerId', '==', user.uid));
+    return query(collection(db, 'users', user.uid, 'bindCodes'));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
   const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'users', user.uid, 'nuclei'), where('ownerId', '==', user.uid));
+    return query(collection(db, 'users', user.uid, 'nuclei'));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
@@ -52,7 +52,6 @@ export default function Dashboard() {
     if (!user || !db) return null;
     return query(
       collection(db, 'users', user.uid, 'bindHistory'),
-      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(5)
     );

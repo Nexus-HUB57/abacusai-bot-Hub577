@@ -6,32 +6,32 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, ArrowUpRight, ArrowDownRight, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, ArrowDownRight, Loader2, Wallet } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 
 export default function CreditsPage() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const profileRef = useMemo(() => {
+  const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
   
-  const { data: profile, loading: profileLoading } = useDoc(profileRef);
+  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  const creditsHistoryQuery = useMemo(() => {
+  const creditsHistoryQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
+    // Align with schema: /users/{userId}/creditHistory
     return query(
-      collection(db, 'creditHistory'),
-      where('userId', '==', user.uid),
+      collection(db, 'users', user.uid, 'creditHistory'),
       orderBy('createdAt', 'desc')
     );
   }, [db, user]);
 
-  const { data: history, loading: historyLoading } = useCollection(creditsHistoryQuery);
+  const { data: history, isLoading: historyLoading } = useCollection(creditsHistoryQuery);
 
   if (!user) return null;
 
@@ -96,7 +96,7 @@ export default function CreditsPage() {
               <div className="flex justify-center items-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-accent" />
               </div>
-            ) : history.length > 0 ? (
+            ) : history && history.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -116,7 +116,7 @@ export default function CreditsPage() {
                       </TableCell>
                       <TableCell className="font-medium font-body uppercase tracking-wider text-xs">
                         <Badge variant="outline" className="border-accent/20 text-accent">
-                          {h.action.replace(/_/g, ' ')}
+                          {h.action?.replace(/_/g, ' ') || 'ACTION'}
                         </Badge>
                       </TableCell>
                       <TableCell>
