@@ -24,7 +24,7 @@ export default function Dashboard() {
   }, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
-  // Sincronizar perfil e inicializar cota diária
+  // Sincronizar perfil e inicializar cota diária - Apenas uma vez por montagem
   useEffect(() => {
     if (user && db && !syncAttemptedRef.current) {
       syncAttemptedRef.current = true;
@@ -59,6 +59,7 @@ export default function Dashboard() {
     }
   }, [userProfile, db, user]);
 
+  // Limitar resultados para economizar cota de leitura
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(collection(db, 'users', user.uid, 'bindCodes'), limit(50));

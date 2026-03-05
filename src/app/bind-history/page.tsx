@@ -1,4 +1,3 @@
-
 "use client";
 
 import { SidebarNav } from '@/components/layout/sidebar-nav';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { History, ArrowRight, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 export default function BindHistoryPage() {
   const { user } = useUser();
@@ -16,10 +15,10 @@ export default function BindHistoryPage() {
 
   const historyQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    // Ownership is guaranteed by the path /users/{userId}/bindHistory
     return query(
       collection(db, 'users', user.uid, 'bindHistory'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(100) // Evitar excesso de leituras
     );
   }, [db, user]);
 
@@ -32,17 +31,17 @@ export default function BindHistoryPage() {
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Bind History</h1>
-          <p className="text-muted-foreground font-body">Chronological audit log of all system bind events.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Histórico de Bind</h1>
+          <p className="text-muted-foreground font-body">Log de auditoria cronológico de todos os eventos de bind no sistema.</p>
         </header>
 
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
               <History className="w-5 h-5 text-accent" />
-              Event Stream
+              Stream de Eventos
             </CardTitle>
-            <CardDescription className="font-body">Monitoring real-time interactions across the Nexus.</CardDescription>
+            <CardDescription className="font-body">Monitorando interações em tempo real no Nexus.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -54,8 +53,8 @@ export default function BindHistoryPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="font-headline">Timestamp</TableHead>
-                    <TableHead className="font-headline">Operation</TableHead>
-                    <TableHead className="font-headline">Bind Code</TableHead>
+                    <TableHead className="font-headline">Operação</TableHead>
+                    <TableHead className="font-headline">Código Bind</TableHead>
                     <TableHead className="font-headline">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -65,11 +64,11 @@ export default function BindHistoryPage() {
                       <TableCell className="font-code text-xs text-muted-foreground">
                         {h.createdAt?.seconds 
                           ? new Date(h.createdAt.seconds * 1000).toLocaleString() 
-                          : 'Pending...'}
+                          : 'Pendente...'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-headline">{h.action || 'LINK'}</span>
+                          <span className="font-headline uppercase">{h.action || 'LINK'}</span>
                           <ArrowRight className="w-3 h-3" />
                         </div>
                       </TableCell>
@@ -90,7 +89,7 @@ export default function BindHistoryPage() {
               </Table>
             ) : (
               <div className="text-center py-20 text-muted-foreground font-body">
-                No history found. Binds will appear here once initiated.
+                Nenhum histórico encontrado. Os binds aparecerão aqui assim que iniciados.
               </div>
             )}
           </CardContent>
