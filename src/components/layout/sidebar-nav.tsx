@@ -11,7 +11,8 @@ import {
   Settings, 
   Wrench,
   Cpu,
-  LogOut
+  LogOut,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/firebase';
@@ -20,9 +21,10 @@ import { signOut } from 'firebase/auth';
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Bind Codes', href: '/binds', icon: Key },
-  { name: 'Nucleus Directory', href: '/nuclei', icon: Database },
+  { name: 'Nucleus Monitoring', href: '/nucleus-monitoring', icon: Database },
+  { name: 'Credits', href: '/credits', icon: CreditCard },
   { name: 'Validation Tools', href: '/tools', icon: Wrench },
-  { name: 'Bind History', href: '/history', icon: History },
+  { name: 'Bind History', href: '/bind-history', icon: History },
 ];
 
 export function SidebarNav() {

@@ -5,14 +5,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Copy, Check, Save, AlertCircle } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const CREDIT_COST = 50; // Example cost per bind code generation
+const CREDIT_COST = 1; // Updated to match user router logic (1 credit per generation)
 
 export function BindGenerator() {
   const [generatedCode, setGeneratedCode] = useState('');
@@ -51,7 +51,7 @@ export function BindGenerator() {
         toast({
           variant: "destructive",
           title: "Insufficient Credits",
-          description: `You need ${CREDIT_COST} credits, but only have ${availableCredits} available.`,
+          description: `You need ${CREDIT_COST} credit, but only have ${availableCredits} available.`,
         });
         setIsSaving(false);
         return;
@@ -67,10 +67,9 @@ export function BindGenerator() {
         description: description || 'Generated via dashboard',
       };
 
-      // Perform mutation (Non-blocking as per guidelines, but here we chain for sequencing)
       const bindDoc = await addDoc(bindCodesRef, newBind);
 
-      // Consume credits
+      // Consume 1 credit as per router logic
       updateDoc(userRef, {
         creditsUsed: increment(CREDIT_COST)
       });
@@ -79,7 +78,7 @@ export function BindGenerator() {
       addDoc(collection(db, 'activityLogs'), {
         userId: user.uid,
         action: 'CREATE_BIND_CODE',
-        description: `Generated code :bind ${generatedCode}`,
+        description: `Created bind code: ${generatedCode}`,
         resourceType: 'bindCode',
         resourceId: bindDoc.id,
         createdAt: serverTimestamp(),
@@ -89,14 +88,14 @@ export function BindGenerator() {
         userId: user.uid,
         action: 'CREATE_BIND_CODE',
         creditsUsed: CREDIT_COST,
-        description: `Consumed ${CREDIT_COST} credits for code generation`,
+        description: `Consumed ${CREDIT_COST} credit for code generation`,
         bindCodeId: bindDoc.id,
         createdAt: serverTimestamp(),
       });
 
       toast({
         title: "Bind Code Saved",
-        description: `Code :bind ${generatedCode} registered. ${CREDIT_COST} credits consumed.`,
+        description: `Code :bind ${generatedCode} registered. ${CREDIT_COST} credit consumed.`,
       });
       
       setGeneratedCode('');
@@ -126,13 +125,13 @@ export function BindGenerator() {
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-card/50 border-border/50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 font-headline">
           <RefreshCw className="w-5 h-5 text-accent" />
           Bind Code Generator
         </CardTitle>
-        <CardDescription>Generate unique codes. Cost: {CREDIT_COST} credits.</CardDescription>
+        <CardDescription className="font-body">Generate unique system codes. Cost: {CREDIT_COST} credit.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
@@ -141,7 +140,7 @@ export function BindGenerator() {
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
               placeholder="Click generate to start"
-              className="font-code text-lg bg-secondary/50 border-primary/20"
+              className="font-code text-lg bg-secondary/30 border-primary/20"
             />
           </div>
           <Button onClick={generate} variant="secondary" className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -155,6 +154,7 @@ export function BindGenerator() {
             value={description} 
             onChange={(e) => setDescription(e.target.value)}
             disabled={!generatedCode || isSaving}
+            className="bg-secondary/30"
           />
         </div>
 

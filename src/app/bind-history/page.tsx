@@ -1,0 +1,118 @@
+
+"use client";
+
+import { useMemo } from 'react';
+import { SidebarNav } from '@/components/layout/sidebar-nav';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { History, ArrowRight, Loader2 } from 'lucide-react';
+import { Toaster } from '@/components/ui/toaster';
+import { useFirestore, useCollection, useUser } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+
+export default function BindHistoryPage() {
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const historyQuery = useMemo(() => {
+    if (!user || !db) return null;
+    return query(
+      collection(db, 'bindHistory'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, user]);
+
+  const nucleiQuery = useMemo(() => {
+    if (!user || !db) return null;
+    return query(collection(db, 'nuclei'), where('userId', '==', user.uid));
+  }, [db, user]);
+
+  const { data: history, loading: historyLoading } = useCollection(historyQuery);
+  const { data: nuclei } = useCollection(nucleiQuery);
+
+  const getNucleusName = (id: string) => {
+    return nuclei.find((n: any) => n.id === id)?.name || id;
+  };
+
+  if (!user) return null;
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <SidebarNav />
+      <main className="flex-1 ml-64 p-8">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Bind History</h1>
+          <p className="text-muted-foreground font-body">Chronological audit log of all system bind events.</p>
+        </header>
+
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-headline">
+              <History className="w-5 h-5 text-accent" />
+              Event Stream
+            </CardTitle>
+            <CardDescription className="font-body">Monitoring real-time interactions across the Nexus.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {historyLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              </div>
+            ) : history.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-headline">Timestamp</TableHead>
+                    <TableHead className="font-headline">Target Nucleus</TableHead>
+                    <TableHead className="font-headline">Operation</TableHead>
+                    <TableHead className="font-headline">Bind Code</TableHead>
+                    <TableHead className="font-headline">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((h: any) => (
+                    <TableRow key={h.id}>
+                      <TableCell className="font-code text-xs text-muted-foreground">
+                        {h.createdAt?.seconds 
+                          ? new Date(h.createdAt.seconds * 1000).toLocaleString() 
+                          : 'Pending...'}
+                      </TableCell>
+                      <TableCell className="font-medium font-body">
+                        {getNucleusName(h.nucleusId)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-headline">INITIATED</span>
+                          <ArrowRight className="w-3 h-3" />
+                          <span className="font-headline">LINK</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-code text-accent font-semibold">
+                        :bind {h.bindCode}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={h.status === 'confirmed' ? 'default' : h.status === 'failed' ? 'destructive' : 'secondary'}
+                          className={h.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}
+                        >
+                          {h.status?.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-20 text-muted-foreground font-body">
+                No history found. Binds will appear here once initiated.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+      <Toaster />
+    </div>
+  );
+}
