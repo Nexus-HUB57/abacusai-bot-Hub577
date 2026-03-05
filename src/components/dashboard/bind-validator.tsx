@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -12,10 +11,12 @@ export function BindValidator() {
   const [inputValue, setInputValue] = useState('');
   
   const validate = (val: string) => {
-    const regex = /^:bind\s([A-Z0-9]{4})$/i;
+    // Regex updated to support alphanumeric codes from 4 to 32 characters
+    // This supports both legacy 4-char codes and new 24-char codes
+    const regex = /^:bind\s([a-z0-9]{4,32})$/i;
     const match = val.match(regex);
     if (match) {
-      return { isValid: true, code: match[1].toUpperCase() };
+      return { isValid: true, code: match[1] };
     }
     return { isValid: false, code: null };
   };
@@ -40,8 +41,8 @@ export function BindValidator() {
               id="validator"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="e.g. :bind XJ49"
-              className="pl-10 font-code"
+              placeholder="e.g. :bind BAcvhZOCtNZpPDTe8CDMW9Gx"
+              className="pl-10 font-code text-sm"
             />
           </div>
         </div>
@@ -60,11 +61,11 @@ export function BindValidator() {
               <p className="text-sm text-muted-foreground">
                 {isValid 
                   ? `Successfully extracted code: ${code}` 
-                  : 'String must start with ":bind " followed by exactly 4 alphanumeric characters.'}
+                  : 'String must start with ":bind " followed by alphanumeric characters.'}
               </p>
               {isValid && (
                 <div className="mt-2">
-                  <Badge variant="outline" className="font-code text-green-500 border-green-500/30">
+                  <Badge variant="outline" className="font-code text-green-500 border-green-500/30 break-all">
                     {code}
                   </Badge>
                 </div>

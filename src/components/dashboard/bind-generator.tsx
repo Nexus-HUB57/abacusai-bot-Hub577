@@ -21,9 +21,11 @@ export function BindGenerator() {
   const db = useFirestore();
 
   const generate = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    // Extended charset to include lowercase for higher entropy as requested
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
-    for (let i = 0; i < 4; i++) {
+    // Increased length to 24 characters to match the provided examples
+    for (let i = 0; i < 24; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     setGeneratedCode(result);
@@ -130,7 +132,7 @@ export function BindGenerator() {
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
               placeholder="Click generate to initialize"
-              className="font-code text-lg bg-secondary/30 border-primary/20 h-12"
+              className="font-code text-sm bg-secondary/30 border-primary/20 h-12"
             />
           </div>
           <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90">
