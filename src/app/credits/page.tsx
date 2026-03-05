@@ -5,14 +5,17 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreditCard, ArrowDownRight, Loader2, Wallet, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreditsPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -31,6 +34,20 @@ export default function CreditsPage() {
 
   const { data: history, isLoading: historyLoading } = useCollection(creditsHistoryQuery);
 
+  const handleManualRefresh = () => {
+    if (!user || !db) return;
+    setDocumentNonBlocking(doc(db, 'users', user.uid), {
+      creditsUsed: 0,
+      lastCreditRefresh: serverTimestamp(),
+      monthlyCredits: 400000,
+    }, { merge: true });
+    
+    toast({
+      title: "Suprimento Renovado",
+      description: "Seu suprimento diário de 400.000 créditos foi reiniciado manualmente.",
+    });
+  };
+
   if (!user) return null;
 
   const availableCredits = (profile?.monthlyCredits || 400000) - (profile?.creditsUsed || 0);
@@ -39,9 +56,28 @@ export default function CreditsPage() {
     <div className="flex min-h-screen bg-background text-foreground">
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Gestão de Créditos</h1>
-          <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo.</p>
+        <header className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Gestão de Créditos</h1>
+            <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo.</p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh}
+              className="gap-2 border-accent/30 text-accent"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Renovar Agora
+            </Button>
+            <a href="https://manus.go.link/iW6sB?action=open-subscription" target="_blank">
+              <Button size="sm" className="gap-2 bg-primary">
+                Inserir Créditos
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            </a>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -56,7 +92,7 @@ export default function CreditsPage() {
             <CardContent>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Ciclo de 24 horas ativo
+                Refresh automático em 24h
               </p>
             </CardContent>
           </Card>

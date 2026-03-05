@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Copy, Check, Save, Loader2, Zap, ExternalLink } from 'lucide-react';
+import { RefreshCw, Copy, Check, Save, Loader2, Zap, ExternalLink, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
 
 const BIND_INITIAL_CREDITS = 40000;
@@ -22,8 +22,16 @@ export function BindGenerator() {
   const { user } = useUser();
   const db = useFirestore();
 
+  const userRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: userProfile } = useDoc(userRef);
+
+  const availableCredits = (userProfile?.monthlyCredits || USER_SUPPLY_QUOTA) - (userProfile?.creditsUsed || 0);
+
   const generate = () => {
-    // 24-character alphanumeric string for high entropy
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     for (let i = 0; i < 24; i++) {
@@ -36,38 +44,31 @@ export function BindGenerator() {
   const handleSave = async () => {
     if (!user || !generatedCode || !db) return;
 
+    if (availableCredits < GENERATION_COST) {
+      toast({
+        variant: "destructive",
+        title: "Créditos Insuficientes",
+        description: (
+          <div className="flex flex-col gap-2 mt-2">
+            <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
+            <a 
+              href="https://manus.go.link/iW6sB?action=open-subscription" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold underline text-white hover:opacity-80 break-all"
+            >
+              https://manus.go.link/iW6sB?action=open-subscription
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        ) as any,
+      });
+      return;
+    }
+
     setIsSaving(true);
     
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      const userData = userSnap.exists() ? userSnap.data() : { monthlyCredits: USER_SUPPLY_QUOTA, creditsUsed: 0 };
-      const availableCredits = (userData.monthlyCredits || USER_SUPPLY_QUOTA) - (userData.creditsUsed || 0);
-
-      if (availableCredits < GENERATION_COST) {
-        toast({
-          variant: "destructive",
-          title: "Créditos Insuficientes",
-          description: (
-            <div className="flex flex-col gap-2 mt-2">
-              <p className="text-sm">Você não tem créditos suficientes. Por favor, faça upgrade através do link abaixo para continuar.</p>
-              <a 
-                href="https://manus.go.link/iW6sB?action=open-subscription" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold underline text-white hover:opacity-80 break-all"
-              >
-                https://manus.go.link/iW6sB?action=open-subscription
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          ) as any,
-        });
-        setIsSaving(false);
-        return;
-      }
-
       const bindCodesRef = collection(db, 'users', user.uid, 'bindCodes');
       const newBind = {
         code: generatedCode,
@@ -80,15 +81,12 @@ export function BindGenerator() {
         description: description || 'Bind de protocolo de alta entropia',
       };
 
-      // Register the new bind with its individual credit allocation
       addDocumentNonBlocking(bindCodesRef, newBind);
       
-      // Consume 1 credit from user daily supply for the generation action
-      setDocumentNonBlocking(userRef, {
+      setDocumentNonBlocking(doc(db, 'users', user.uid), {
         creditsUsed: increment(GENERATION_COST)
       }, { merge: true });
 
-      // Record logs
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
         ownerId: user.uid,
         action: 'CREATE_BIND',
@@ -107,7 +105,7 @@ export function BindGenerator() {
 
       toast({
         title: "Protocolo Inicializado",
-        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS.toLocaleString()} créditos individuais.`,
+        description: `Código :bind ${generatedCode} registrado com sucesso.`,
       });
       
       setGeneratedCode('');
@@ -138,10 +136,21 @@ export function BindGenerator() {
           <RefreshCw className="w-5 h-5 text-accent" />
           Gerador de Protocolo
         </CardTitle>
-        <CardDescription className="font-body flex items-center gap-2">
-          <Zap className="w-3 h-3 text-yellow-500" />
-          Suprimento diário do sistema: {USER_SUPPLY_QUOTA.toLocaleString()} créditos
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <CardDescription className="font-body flex items-center gap-2">
+            <Zap className="w-3 h-3 text-yellow-500" />
+            Créditos Diários: {availableCredits.toLocaleString()} / {USER_SUPPLY_QUOTA.toLocaleString()}
+          </CardDescription>
+          {availableCredits <= 10 && (
+            <a 
+              href="https://manus.go.link/iW6sB?action=open-subscription" 
+              target="_blank" 
+              className="text-[10px] text-accent hover:underline flex items-center gap-1"
+            >
+              Inserir Créditos <ExternalLink className="w-2 h-2" />
+            </a>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
@@ -149,7 +158,7 @@ export function BindGenerator() {
             <Input
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
-              placeholder="Gerar bind alfanumérico de 24 chars"
+              placeholder="Gerar bind alfanumérico"
               className="font-code text-xs bg-secondary/30 border-primary/20 h-12"
             />
           </div>
@@ -174,7 +183,7 @@ export function BindGenerator() {
             className="flex-1 border-accent/50 hover:bg-accent/10"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? 'Copiado' : 'Copiar Comando Completo'}
+            {copied ? 'Copiado' : 'Copiar Comando'}
           </Button>
           <Button
             onClick={handleSave}
@@ -185,6 +194,25 @@ export function BindGenerator() {
             {isSaving ? 'Registrando...' : 'Inicializar Bind'}
           </Button>
         </div>
+        
+        {availableCredits < 1 && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-3 items-start">
+            <Info className="w-4 h-4 text-destructive mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-destructive">Suprimento Esgotado</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Você não tem créditos suficientes. Por favor, faça upgrade para continuar operando.
+              </p>
+              <a 
+                href="https://manus.go.link/iW6sB?action=open-subscription" 
+                target="_blank" 
+                className="text-[10px] text-accent hover:underline font-bold block mt-1"
+              >
+                https://manus.go.link/iW6sB?action=open-subscription
+              </a>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
