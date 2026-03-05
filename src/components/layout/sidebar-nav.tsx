@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -20,11 +19,11 @@ import { signOut } from 'firebase/auth';
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Bind Codes', href: '/binds', icon: Key },
-  { name: 'Nucleus Monitoring', href: '/nucleus-monitoring', icon: Database },
-  { name: 'Credits', href: '/credits', icon: CreditCard },
-  { name: 'Validation Tools', href: '/tools', icon: Wrench },
-  { name: 'Bind History', href: '/bind-history', icon: History },
+  { name: 'Códigos Bind', href: '/binds', icon: Key },
+  { name: 'Monitoramento', href: '/nucleus-monitoring', icon: Database },
+  { name: 'Créditos', href: '/credits', icon: CreditCard },
+  { name: 'Ferramentas', href: '/tools', icon: Wrench },
+  { name: 'Histórico', href: '/bind-history', icon: History },
 ];
 
 export function SidebarNav() {
@@ -70,14 +69,14 @@ export function SidebarNav() {
       <div className="p-4 border-t border-border space-y-1">
         <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground w-full transition-colors text-left">
           <Settings className="w-5 h-5" />
-          Settings
+          Configurações
         </button>
         <button 
           onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors text-left"
         >
           <LogOut className="w-5 h-5" />
-          Logout
+          Sair do Nexus
         </button>
       </div>
     </div>

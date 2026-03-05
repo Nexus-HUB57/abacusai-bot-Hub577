@@ -48,8 +48,8 @@ export function BindGenerator() {
       if (availableCredits < GENERATION_COST) {
         toast({
           variant: "destructive",
-          title: "Insufficient User Supply",
-          description: `You need ${GENERATION_COST} credit to generate a new bind. Current supply: ${availableCredits}`,
+          title: "Suprimento Insuficiente",
+          description: `Você não tem créditos suficientes. Você precisa de ${GENERATION_COST} crédito para gerar um novo bind. Saldo atual: ${availableCredits}`,
         });
         setIsSaving(false);
         return;
@@ -64,7 +64,7 @@ export function BindGenerator() {
         remainingCredits: BIND_INITIAL_CREDITS,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
-        description: description || 'High-entropy protocol bind',
+        description: description || 'Bind de protocolo de alta entropia',
       };
 
       // Register the new bind with its individual credit allocation
@@ -88,13 +88,13 @@ export function BindGenerator() {
         ownerId: user.uid,
         action: 'CONSUME_CREDIT',
         creditsUsed: GENERATION_COST,
-        description: `Generated bind code: ${generatedCode} with ${BIND_INITIAL_CREDITS} credits.`,
+        description: `Bind gerado: ${generatedCode} com ${BIND_INITIAL_CREDITS} créditos.`,
         createdAt: serverTimestamp(),
       });
 
       toast({
-        title: "Protocol Initialized",
-        description: `Code :bind ${generatedCode} registered with ${BIND_INITIAL_CREDITS} credits.`,
+        title: "Protocolo Inicializado",
+        description: `Código :bind ${generatedCode} registrado com ${BIND_INITIAL_CREDITS} créditos individuais.`,
       });
       
       setGeneratedCode('');
@@ -102,7 +102,7 @@ export function BindGenerator() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Initialization Error",
+        title: "Erro de Inicialização",
         description: error.message,
       });
     } finally {
@@ -123,11 +123,11 @@ export function BindGenerator() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline">
           <RefreshCw className="w-5 h-5 text-accent" />
-          Protocol Generator
+          Gerador de Protocolo
         </CardTitle>
         <CardDescription className="font-body flex items-center gap-2">
           <Zap className="w-3 h-3 text-yellow-500" />
-          Daily system supply: {USER_SUPPLY_QUOTA.toLocaleString()} credits
+          Suprimento diário do sistema: {USER_SUPPLY_QUOTA.toLocaleString()} créditos
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -136,17 +136,17 @@ export function BindGenerator() {
             <Input
               readOnly
               value={generatedCode ? `:bind ${generatedCode}` : ''}
-              placeholder="Generate 24-char alphanumeric bind"
+              placeholder="Gerar bind alfanumérico de 24 chars"
               className="font-code text-xs bg-secondary/30 border-primary/20 h-12"
             />
           </div>
           <Button onClick={generate} variant="secondary" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90 px-6">
-            Generate
+            Gerar
           </Button>
         </div>
 
         <Input 
-          placeholder="Purpose / Description (Optional)" 
+          placeholder="Propósito / Descrição (Opcional)" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)}
           disabled={!generatedCode || isSaving}
@@ -161,7 +161,7 @@ export function BindGenerator() {
             className="flex-1 border-accent/50 hover:bg-accent/10"
           >
             {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? 'Copied' : 'Copy Full Command'}
+            {copied ? 'Copiado' : 'Copiar Comando Completo'}
           </Button>
           <Button
             onClick={handleSave}
@@ -169,7 +169,7 @@ export function BindGenerator() {
             className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            {isSaving ? 'Registering...' : 'Initialize Bind'}
+            {isSaving ? 'Registrando...' : 'Inicializar Bind'}
           </Button>
         </div>
       </CardContent>

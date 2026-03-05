@@ -16,30 +16,29 @@ export default function Dashboard() {
   const db = useFirestore();
   const hasSyncedRef = useRef(false);
 
-  // User profile for telemetry
+  // Perfil do usuário para telemetria
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
-  // Sync user profile on load with default credits if missing
-  // AND Implement the 24-hour credit refresh loop
+  // Sincronizar perfil e inicializar cota diária
   useEffect(() => {
     if (user && db && !hasSyncedRef.current) {
       hasSyncedRef.current = true;
       const userRef = doc(db, 'users', user.uid);
       setDocumentNonBlocking(userRef, {
-        name: user.displayName || 'Anonymous Nexus Node',
+        name: user.displayName || 'Nodo Nexus Anônimo',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-        // Initialize supply if missing (400,000 credits)
+        // Fornecimento inicial de 400.000 créditos
         monthlyCredits: 400000,
       }, { merge: true });
     }
   }, [user, db]);
 
-  // Credit Refresh Logic: Runs when userProfile loads
+  // Lógica de Refresh de 24 horas: Redefine créditos usados
   useEffect(() => {
     if (userProfile && db && user) {
       const now = new Date();
@@ -51,13 +50,12 @@ export default function Dashboard() {
         setDocumentNonBlocking(userRef, {
           creditsUsed: 0,
           lastCreditRefresh: serverTimestamp(),
-          monthlyCredits: 400000, // Ensure it stays at the target supply
+          monthlyCredits: 400000, 
         }, { merge: true });
       }
     }
   }, [userProfile, db, user]);
 
-  // Real-time stats
   const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(collection(db, 'users', user.uid, 'bindCodes'));
@@ -86,10 +84,10 @@ export default function Dashboard() {
   const availableCredits = (userProfile?.monthlyCredits || 400000) - (userProfile?.creditsUsed || 0);
 
   const stats = [
-    { label: 'Network Binds', value: binds?.length || 0, icon: Key, color: 'text-accent' },
-    { label: 'Active Nuclei', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Sync Status', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
-    { label: 'Daily Balance', value: availableCredits, icon: Wallet, color: 'text-green-500' },
+    { label: 'Binds de Rede', value: binds?.length || 0, icon: Key, color: 'text-accent' },
+    { label: 'Núcleos Ativos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
+    { label: 'Sincronização', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Saldo Diário', value: availableCredits, icon: Wallet, color: 'text-green-500' },
   ];
 
   return (
@@ -97,8 +95,8 @@ export default function Dashboard() {
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Nexus Command Center</h1>
-          <p className="text-muted-foreground font-body">Orchestrate binds with a renewable daily supply of 400,000 credits.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
+          <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -110,7 +108,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold font-headline">{stat.value.toLocaleString()}</div>
-                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Live Data Stream</p>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase">Fluxo de Dados em Tempo Real</p>
               </CardContent>
             </Card>
           ))}
@@ -126,7 +124,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
                 <Activity className="w-5 h-5 text-accent" />
-                Recent Network Operations
+                Operações de Rede Recentes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -141,19 +139,19 @@ export default function Dashboard() {
                         }`} />
                         <div>
                           <p className="text-sm font-code font-bold text-accent">:bind {log.bindCode}</p>
-                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">Action: {log.action?.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] text-muted-foreground font-body uppercase tracking-tighter">Ação: {log.action?.replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-code bg-background/50 px-2 py-1 rounded">
                         {log.createdAt?.seconds 
                           ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() 
-                          : 'REALTIME'}
+                          : 'TEMPO REAL'}
                       </span>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-12 text-muted-foreground font-body text-sm italic">
-                    Waiting for network activity...
+                    Aguardando atividade na rede...
                   </div>
                 )}
               </div>
