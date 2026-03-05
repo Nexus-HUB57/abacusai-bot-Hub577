@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useMemo } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,23 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Key, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser } from '@/firebase';
+import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function BindsPage() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const bindsQuery = useMemo(() => {
+  const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(
-      collection(db, 'bindCodes'),
-      where('createdBy', '==', user.uid),
+      collection(db, 'users', user.uid, 'bindCodes'),
+      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
   }, [db, user]);
 
-  const { data: bindCodes, loading } = useCollection(bindsQuery);
+  const { data: bindCodes, isLoading } = useCollection(bindsQuery);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -47,11 +46,11 @@ export default function BindsPage() {
             <CardDescription className="font-body">Real-time status tracking for all bind operations.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {isLoading ? (
               <div className="flex justify-center items-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-accent" />
               </div>
-            ) : bindCodes.length > 0 ? (
+            ) : bindCodes && bindCodes.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>

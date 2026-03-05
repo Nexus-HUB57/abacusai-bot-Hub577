@@ -1,71 +1,71 @@
 
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Key, Database, Zap, Clock } from 'lucide-react';
+import { Activity, Key, Database, Zap } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
-import { collection, query, where, orderBy, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
   // Sync user profile on first load
   useEffect(() => {
     if (user && db) {
       const userRef = doc(db, 'users', user.uid);
-      setDoc(userRef, {
+      updateDocumentNonBlocking(userRef, {
         name: user.displayName || 'Anonymous User',
         email: user.email,
         lastSignedIn: serverTimestamp(),
-      }, { merge: true });
+      });
     }
   }, [user, db]);
 
   // User profile for credits
-  const userProfileRef = useMemo(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
   // Stats queries
-  const bindsQuery = useMemo(() => {
+  const bindsQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'bindCodes'), where('createdBy', '==', user.uid));
+    return query(collection(db, 'users', user.uid, 'bindCodes'), where('ownerId', '==', user.uid));
   }, [db, user]);
   const { data: binds } = useCollection(bindsQuery);
 
-  const nucleiQuery = useMemo(() => {
+  const nucleiQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'nuclei'), where('userId', '==', user.uid));
+    return query(collection(db, 'users', user.uid, 'nuclei'), where('ownerId', '==', user.uid));
   }, [db, user]);
   const { data: nuclei } = useCollection(nucleiQuery);
 
-  const historyQuery = useMemo(() => {
+  const historyQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(
-      collection(db, 'bindHistory'),
-      where('userId', '==', user.uid),
+      collection(db, 'users', user.uid, 'bindHistory'),
+      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
   }, [db, user]);
   const { data: recentLogs } = useCollection(historyQuery);
 
-  if (authLoading) return null;
-  if (!user) redirect('/');
+  if (isUserLoading) return null;
+  if (!user) redirect('/auth');
 
   const stats = [
-    { label: 'Active Binds', value: binds.length, icon: Key, color: 'text-accent' },
-    { label: 'Total Nuclei', value: nuclei.length, icon: Database, color: 'text-primary' },
-    { label: 'Syncing Nodes', value: nuclei.filter((n: any) => n.status === 'syncing').length, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Active Binds', value: binds?.length || 0, icon: Key, color: 'text-accent' },
+    { label: 'Total Nuclei', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
+    { label: 'Syncing Nodes', value: nuclei?.filter((n: any) => n.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
     { label: 'Credits Left', value: (userProfile?.monthlyCredits || 40000) - (userProfile?.creditsUsed || 0), icon: Activity, color: 'text-green-500' },
   ];
 
@@ -105,7 +105,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentLogs.length > 0 ? (
+                {recentLogs && recentLogs.length > 0 ? (
                   recentLogs.map((log: any, i: number) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/40 group hover:bg-secondary/50 transition-colors">
                       <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export default function Dashboard() {
                         }`} />
                         <div>
                           <p className="text-sm font-medium font-body">Bind operation: :bind {log.bindCode}</p>
-                          <p className="text-xs text-muted-foreground font-body">Nucleus: {log.nucleusId}</p>
+                          <p className="text-xs text-muted-foreground font-body">Action: {log.action}</p>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-code">

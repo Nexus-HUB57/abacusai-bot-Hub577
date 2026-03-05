@@ -1,40 +1,29 @@
 
 "use client";
 
-import { useMemo } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { History, ArrowRight, Loader2 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { useFirestore, useCollection, useUser } from '@/firebase';
+import { useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function BindHistoryPage() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const historyQuery = useMemo(() => {
+  const historyQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
     return query(
-      collection(db, 'bindHistory'),
-      where('userId', '==', user.uid),
+      collection(db, 'users', user.uid, 'bindHistory'),
+      where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
   }, [db, user]);
 
-  const nucleiQuery = useMemo(() => {
-    if (!user || !db) return null;
-    return query(collection(db, 'nuclei'), where('userId', '==', user.uid));
-  }, [db, user]);
-
-  const { data: history, loading: historyLoading } = useCollection(historyQuery);
-  const { data: nuclei } = useCollection(nucleiQuery);
-
-  const getNucleusName = (id: string) => {
-    return nuclei.find((n: any) => n.id === id)?.name || id;
-  };
+  const { data: history, isLoading } = useCollection(historyQuery);
 
   if (!user) return null;
 
@@ -56,16 +45,15 @@ export default function BindHistoryPage() {
             <CardDescription className="font-body">Monitoring real-time interactions across the Nexus.</CardDescription>
           </CardHeader>
           <CardContent>
-            {historyLoading ? (
+            {isLoading ? (
               <div className="flex justify-center items-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-accent" />
               </div>
-            ) : history.length > 0 ? (
+            ) : history && history.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="font-headline">Timestamp</TableHead>
-                    <TableHead className="font-headline">Target Nucleus</TableHead>
                     <TableHead className="font-headline">Operation</TableHead>
                     <TableHead className="font-headline">Bind Code</TableHead>
                     <TableHead className="font-headline">Status</TableHead>
@@ -79,14 +67,10 @@ export default function BindHistoryPage() {
                           ? new Date(h.createdAt.seconds * 1000).toLocaleString() 
                           : 'Pending...'}
                       </TableCell>
-                      <TableCell className="font-medium font-body">
-                        {getNucleusName(h.nucleusId)}
-                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-headline">INITIATED</span>
+                          <span className="font-headline">{h.action || 'LINK'}</span>
                           <ArrowRight className="w-3 h-3" />
-                          <span className="font-headline">LINK</span>
                         </div>
                       </TableCell>
                       <TableCell className="font-code text-accent font-semibold">

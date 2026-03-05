@@ -1,98 +1,29 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * BindNexus Security Rules
-     * 
-     * Core Philosophy: 
-     * This ruleset enforces a strict user-ownership model. Every piece of data—Nuclei, 
-     * BindCodes, and BindOperations—is hierarchically nested under a specific user's 
-     * path. Access is granted only if the authenticated user's UID matches the 
-     * {userId} in the document path.
-     * 
-     * Data Structure:
-     * Data is organized in a deep hierarchy: /users/{userId}/nuclei/{nucleusId}/...
-     * This structure ensures that sub-resources (BindCodes and Operations) inherit 
-     * the ownership context of the parent Nucleus.
-     * 
-     * Key Security Decisions:
-     * 1. Authorization Independence: The 'ownerId' field is denormalized into every 
-     *    document. This allows rules to verify ownership directly on the document 
-     *    being accessed without requiring expensive get() calls to parent documents.
-     * 2. Path Consistency: On creation, rules enforce that the document's internal 
-     *    'ownerId' matches the {userId} parameter in the URL path.
-     * 3. Immutability: Relational fields (like ownerId) are made immutable once 
-     *    created to prevent data from being "stolen" or moved between user accounts.
-     * 4. Prototyping Flexibility: While ownership is strictly enforced, the 
-     *    specific data types and optional fields of the entities are not validated, 
-     *    allowing for rapid schema iteration.
-     */
-
-    // --- Helper Functions ---
-
-    /** @description Checks if the request is from a signed-in user. */
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /** @description Checks if the authenticated user matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the document exists and the user is the owner. Used for updates and deletes. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
 
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the Nucleus entity, the core unit of the system.
-     * @path /users/{userId}/nuclei/{nucleusId}
-     * @allow (get) If user is authenticated as {userId}.
-     * @deny (create) If the 'ownerId' in the data does not match the {userId} in the path.
-     * @principle Enforces path-based ownership and relational integrity via denormalized ownerId.
-     */
-    match /users/{userId}/nuclei/{nucleusId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.ownerId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Rules for BindCodes associated with a specific Nucleus.
-       * @path /users/{userId}/nuclei/{nucleusId}/bindCodes/{bindCodeId}
-       * @allow (list) User can list their own bind codes.
-       * @deny (update) Attempting to change the 'ownerId' or 'nucleusId' during an update.
-       * @principle Uses denormalized fields to perform atomic authorization checks.
-       */
-      match /bindCodes/{bindCodeId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.ownerId == userId && request.resource.data.nucleusId == nucleusId;
-        allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.nucleusId == resource.data.nucleusId;
-        allow delete: if isExistingOwner(userId);
-
-        /**
-         * @description Rules for BindOperations logging actions for a specific BindCode.
-         * @path /users/{userId}/nuclei/{nucleusId}/bindCodes/{bindCodeId}/bindOperations/{operationId}
-         * @allow (create) Authenticated owner creates an operation log.
-         * @deny (get) A user trying to access an operation log belonging to a different userId path.
-         * @principle Strict hierarchical ownership enforced through path variables and denormalized data.
-         */
-        match /bindOperations/{operationId} {
-          allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.ownerId == userId && request.resource.data.bindCodeId == bindCodeId;
-          allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.bindCodeId == resource.data.bindCodeId;
-          allow delete: if isExistingOwner(userId);
-        }
+      match /nuclei/{nucleusId} {
+        allow read, write: if isOwner(userId);
       }
-    }
-
-    // Default deny for any unexpected paths
-    match /{document=**} {
-      allow read, write: if false;
+      match /bindCodes/{bindCodeId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /creditHistory/{logId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /bindHistory/{logId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }

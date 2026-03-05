@@ -7,10 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Copy, Check, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc, getDoc, increment } from 'firebase/firestore';
 
 const CREDIT_COST = 1;
 
@@ -42,17 +40,6 @@ export function BindGenerator() {
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       
-      if (!userSnap.exists()) {
-        // Create user profile if it doesn't exist (failsafe)
-        await setDoc(userRef, {
-          name: user.displayName || 'Anonymous',
-          email: user.email,
-          monthlyCredits: 40000,
-          creditsUsed: 0,
-          createdAt: serverTimestamp()
-        });
-      }
-      
       const userData = userSnap.exists() ? userSnap.data() : { monthlyCredits: 40000, creditsUsed: 0 };
       const availableCredits = (userData.monthlyCredits || 40000) - (userData.creditsUsed || 0);
 
@@ -66,61 +53,49 @@ export function BindGenerator() {
         return;
       }
 
-      const bindCodesRef = collection(db, 'bindCodes');
+      const bindCodesRef = collection(db, 'users', user.uid, 'bindCodes');
       const newBind = {
         code: generatedCode,
         format: `:bind ${generatedCode}`,
         status: 'active',
-        createdBy: user.uid,
-        ownerId: user.uid, // Required for security rules
+        ownerId: user.uid,
         createdAt: serverTimestamp(),
         description: description || 'Generated via dashboard',
       };
 
-      // Non-blocking writes with error emission
-      addDoc(bindCodesRef, newBind)
-        .then((bindDoc) => {
-          // Consume credit
-          updateDoc(userRef, {
-            creditsUsed: increment(CREDIT_COST)
-          });
+      // Non-blocking writes
+      addDocumentNonBlocking(bindCodesRef, newBind);
+      
+      // Consume credit
+      updateDocumentNonBlocking(userRef, {
+        creditsUsed: increment(CREDIT_COST)
+      });
 
-          // Log activity
-          addDoc(collection(db, 'activityLogs'), {
-            userId: user.uid,
-            ownerId: user.uid,
-            action: 'CREATE_BIND_CODE',
-            description: `Created bind code: ${generatedCode}`,
-            resourceId: bindDoc.id,
-            createdAt: serverTimestamp(),
-          });
+      // Log bind history
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'bindHistory'), {
+        ownerId: user.uid,
+        action: 'CREATE_BIND',
+        bindCode: generatedCode,
+        status: 'confirmed',
+        createdAt: serverTimestamp(),
+      });
 
-          // Log credit history
-          addDoc(collection(db, 'creditHistory'), {
-            userId: user.uid,
-            ownerId: user.uid,
-            action: 'CREATE_BIND_CODE',
-            creditsUsed: CREDIT_COST,
-            description: `Consumed ${CREDIT_COST} credit for code generation`,
-            createdAt: serverTimestamp(),
-          });
+      // Log credit history
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'creditHistory'), {
+        ownerId: user.uid,
+        action: 'CONSUME_CREDIT',
+        creditsUsed: CREDIT_COST,
+        description: `Generated bind code: ${generatedCode}`,
+        createdAt: serverTimestamp(),
+      });
 
-          toast({
-            title: "Bind Code Registered",
-            description: `Code :bind ${generatedCode} is now active.`,
-          });
-          
-          setGeneratedCode('');
-          setDescription('');
-        })
-        .catch(async (error) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'bindCodes',
-            operation: 'create',
-            requestResourceData: newBind
-          }));
-        });
-
+      toast({
+        title: "Bind Code Registered",
+        description: `Code :bind ${generatedCode} is now active.`,
+      });
+      
+      setGeneratedCode('');
+      setDescription('');
     } catch (error: any) {
       toast({
         variant: "destructive",
