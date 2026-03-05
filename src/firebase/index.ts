@@ -6,6 +6,7 @@ import { getFirestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
 
 export function initializeFirebase() {
+  // Ensure we only initialize once
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const firestore = getFirestore(app);
