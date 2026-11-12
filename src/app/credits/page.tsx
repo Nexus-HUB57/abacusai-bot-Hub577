@@ -62,7 +62,7 @@ export default function CreditsPage() {
         <header className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Gestão de Créditos</h1>
-            <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo Nexus.</p>
+            <p className="text-muted-foreground font-body">Monitore seu suprimento diário e histórico de consumo AbacusAI.</p>
           </div>
           <div className="flex gap-3">
             <Button 

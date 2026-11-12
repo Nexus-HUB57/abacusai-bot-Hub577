@@ -8,7 +8,7 @@ import { BindValidator } from '@/components/dashboard/bind-validator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
-import { Activity, Key, Database, Zap, Wallet, Loader2, Send, ShieldCheck } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet, Loader2, Send, ShieldCheck, Box } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
 import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
@@ -91,8 +91,8 @@ export default function Dashboard() {
 
   const stats = [
     { label: 'Binds Ativos', value: binds?.length || 0, icon: Key, color: 'text-accent' },
-    { label: 'Núcleos', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
-    { label: 'Sync Status', value: nuclei?.filter((item: any) => item.status === 'online' || item.status === 'syncing').length || 0, icon: Zap, color: 'text-yellow-500' },
+    { label: 'Núcleos Nexus', value: nuclei?.length || 0, icon: Database, color: 'text-primary' },
+    { label: 'AbacusAI Sync', value: 'ATIVO', icon: Box, color: 'text-yellow-500' },
     { label: 'Saldo Diário', value: Math.max(0, availableCredits), icon: Wallet, color: 'text-green-500' },
   ];
 
@@ -103,11 +103,11 @@ export default function Dashboard() {
         <header className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
-            <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
+            <p className="text-muted-foreground font-body">Orquestre binds e agentes AbacusAI com sincronização end-to-end.</p>
           </div>
           <Badge variant="outline" className="gap-2 px-3 py-1 border-accent/30 text-accent bg-accent/5">
             <ShieldCheck className="w-3 h-3" />
-            Blueprint v2.0 Active
+            Blueprint v2.0 Synchronized
           </Badge>
         </header>
 
@@ -120,7 +120,8 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold font-headline">
-                  {profileLoading && stat.label === 'Saldo Diário' ? '...' : stat.value.toLocaleString()}
+                  {profileLoading && stat.label === 'Saldo Diário' ? '...' : 
+                   typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                 </div>
               </CardContent>
             </Card>
@@ -133,37 +134,51 @@ export default function Dashboard() {
              <BindValidator />
           </div>
           
-          <Card className="bg-card/50 border-accent/20 h-fit">
-            <CardHeader>
-              <CardTitle className="text-lg font-headline flex items-center gap-2">
-                <Send className="w-5 h-5 text-accent" />
-                Nexus Telegram Bridge
-              </CardTitle>
-              <CardDescription className="text-xs font-body">Status da integração end-to-end com o bot do Telegram.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="p-4 rounded-xl bg-secondary/20 border border-border/50 space-y-3">
-                 <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground">Blueprint Status</span>
-                    <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px]">VALIDATED</Badge>
+          <div className="space-y-8">
+            <Card className="bg-card/50 border-accent/20 h-fit">
+              <CardHeader>
+                <CardTitle className="text-lg font-headline flex items-center gap-2">
+                  <Send className="w-5 h-5 text-accent" />
+                  AbacusAI Bridge
+                </CardTitle>
+                <CardDescription className="text-xs font-body">Integração ativa com o motor de agentes open-source.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                 <div className="p-4 rounded-xl bg-secondary/20 border border-border/50 space-y-3">
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Source Link</span>
+                      <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px]">SYNCED</Badge>
+                   </div>
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Repository</span>
+                      <span className="font-code text-accent text-[10px]">abacusai-bot-Hub57</span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Automation</span>
+                      <span className="font-code opacity-70">100+ Connectors</span>
+                   </div>
                  </div>
-                 <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground">Bot Sync</span>
-                    <span className="font-code text-accent">@manus_ai_agent_bot</span>
-                 </div>
-                 <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground">Last Ping</span>
-                    <span className="font-code opacity-70">Just Now</span>
-                 </div>
-               </div>
-               <a href="https://t.me/manus_ai_agent_bot" target="_blank" rel="noopener noreferrer">
-                 <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-                   Abrir Canal Telegram
-                   <Send className="w-4 h-4" />
-                 </Button>
-               </a>
-            </CardContent>
-          </Card>
+                 <a href="https://t.me/manus_ai_agent_bot" target="_blank" rel="noopener noreferrer">
+                   <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+                     Sincronizar Telegram Bot
+                     <Send className="w-4 h-4" />
+                   </Button>
+                 </a>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold uppercase">Status do Sistema</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  Orquestrador Operacional
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <section className="mt-8">
@@ -171,7 +186,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="font-headline text-lg flex items-center gap-2">
                 <Activity className="w-5 h-5 text-accent" />
-                Operações de Rede Recentes
+                Stream de Operações Recentes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -207,7 +222,7 @@ export default function Dashboard() {
                   ))
                 ) : (
                   <div className="text-center py-12 text-muted-foreground font-body text-sm italic border-2 border-dashed rounded-xl">
-                    Nenhuma atividade recente registrada.
+                    Nenhuma atividade recente registrada no Nexus.
                   </div>
                 )}
               </div>

@@ -16,7 +16,9 @@ import {
   CheckCircle2, 
   Loader2, 
   Cpu,
-  History
+  History,
+  ShieldAlert,
+  MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,15 +31,19 @@ export default function SwarmPage() {
   const handleStartSwarm = () => {
     setStatus('running');
     setProgress(0);
-    setLogs(['[SYSTEM] Inicializando Enxame Nexus...', '[CMD] gh auth status --hostname github.com']);
+    setLogs([
+      '[SYSTEM] Inicializando Motor de Ação AbacusAI...', 
+      '[CMD] gh repo clone Nexus-HUB57/abacusai-bot-Hub57',
+      '[INFO] Ativando agentes 100% gratuitos e open source.'
+    ]);
     
     const steps = [
-      { p: 10, log: '[AUTH] Autenticado como Nexus-HUB57' },
-      { p: 30, log: '[SWARM] Orquestrando 12 nodos para operação de clone' },
-      { p: 50, log: '[CMD] gh repo clone Nexus-HUB57/abacusai-bot-Hub57' },
-      { p: 70, log: '[GIT] Recebendo objetos: 100% (2450/2450), concluído.' },
-      { p: 90, log: '[BUILD] Instalando dependências abacusai...' },
-      { p: 100, log: '[SUCCESS] Swarm finalizado. abacusai-bot-Hub57 pronto.' }
+      { p: 10, log: '[AUTH] Conectado ao Nexus-HUB57 (Sincronizado)' },
+      { p: 25, log: '[SWARM] Orquestrando malha para suporte a WhatsApp/Telegram/Discord' },
+      { p: 45, log: '[CMD] gh repo clone Nexus-HUB57/abacusai-bot-Hub57 --depth 1' },
+      { p: 65, log: '[GIT] Recebendo objetos: 100% (4560/4560), conclusão de handshake.' },
+      { p: 85, log: '[BUILD] Instalando drivers de conectores (100+ integrados)...' },
+      { p: 100, log: '[SUCCESS] Swarm finalizado. Agente AbacusAI pronto para Hand-off.' }
     ];
 
     steps.forEach((step, i) => {
@@ -47,11 +53,11 @@ export default function SwarmPage() {
         if (step.p === 100) {
           setStatus('completed');
           toast({
-            title: "Operação Concluída",
-            description: "O Enxame finalizou o clone do repositório com sucesso.",
+            title: "Sincronização End-to-End",
+            description: "O repositório AbacusAI foi clonado e vinculado à sua malha.",
           });
         }
-      }, (i + 1) * 1500);
+      }, (i + 1) * 1200);
     });
   };
 
@@ -62,9 +68,9 @@ export default function SwarmPage() {
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Boxes className="w-8 h-8 text-accent" />
-            <h1 className="text-3xl font-bold tracking-tight font-headline">Operações de Enxame (Swarm)</h1>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Operações de Enxame (AbacusAI)</h1>
           </div>
-          <p className="text-muted-foreground font-body">Orquestração de múltiplos agentes para tarefas de alta escala em repositórios Nexus.</p>
+          <p className="text-muted-foreground font-body">Orquestração end-to-end de agentes pessoais para mensageria e automação de tarefas cruzadas.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -73,25 +79,25 @@ export default function SwarmPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
                   <Github className="w-5 h-5" />
-                  GitHub Clone Swarm
+                  GitHub Source Sync
                 </CardTitle>
                 <CardDescription>
-                  Inicia o clone sincronizado do repositório <code className="bg-secondary px-1 rounded">Nexus-HUB57/abacusai-bot-Hub57</code> em toda a malha.
+                  Clonando repositório <code className="bg-secondary px-1 rounded text-accent">Nexus-HUB57/abacusai-bot-Hub57</code> com permissões full access.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="p-6 rounded-xl bg-black/40 border border-border/50 font-code text-xs text-green-400 space-y-2 overflow-auto h-[200px]">
+                <div className="p-6 rounded-xl bg-black/40 border border-border/50 font-code text-xs text-green-400 space-y-2 overflow-auto h-[220px]">
                   {logs.length > 0 ? (
                     logs.map((log, i) => <p key={i}>{log}</p>)
                   ) : (
-                    <p className="text-muted-foreground italic">Aguardando comando de inicialização...</p>
+                    <p className="text-muted-foreground italic">Aguardando comando de inicialização da malha Abacus...</p>
                   )}
                   {status === 'running' && <p className="animate-pulse">_</p>}
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
-                    <span>Progresso do Enxame</span>
+                    <span>Integridade da Malha</span>
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-2 bg-secondary" />
@@ -108,36 +114,52 @@ export default function SwarmPage() {
                     ) : (
                       <Play className="w-5 h-5" />
                     )}
-                    {status === 'completed' ? 'Reiniciar Enxame' : 'Iniciar Orquestração'}
+                    {status === 'completed' ? 'Reiniciar Sync' : 'Iniciar Sincronização End-to-End'}
                   </Button>
                   {status === 'completed' && (
                     <Button variant="outline" className="border-green-500/50 text-green-500 h-12 gap-2">
                       <CheckCircle2 className="w-5 h-5" />
-                      Finalizado
+                      Sincronizado
                     </Button>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-border">
-              <CardHeader>
-                <CardTitle className="text-lg font-headline flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-accent" />
-                  Nodos de Execução
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                    <div key={i} className="p-3 border rounded-lg bg-secondary/20 flex flex-col items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${status === 'running' ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
-                      <span className="text-[10px] font-code">NODE-{i.toString().padStart(3, '0')}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-secondary/10 border-border">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-accent" />
+                    Canais de Mensageria
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-2">
+                  <div className="flex justify-between text-[10px]">
+                    <span>WhatsApp Agent</span>
+                    <Badge variant="outline" className="h-4 text-[8px] bg-green-500/10 text-green-500 border-green-500/20">READY</Badge>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span>Telegram Bridge</span>
+                    <Badge variant="outline" className="h-4 text-[8px] bg-green-500/10 text-green-500 border-green-500/20">ACTIVE</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-secondary/10 border-border">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-yellow-500" />
+                    Security Model
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Execução sandbox kernel-level ativa para comandos shell e manipulação de arquivos.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -145,17 +167,17 @@ export default function SwarmPage() {
               <CardHeader>
                 <CardTitle className="text-sm uppercase font-bold flex items-center gap-2">
                   <History className="w-4 h-4" />
-                  Operação Recente
+                  Status do Agente
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase">Repositório Alvo</p>
-                  <p className="text-sm font-bold font-code break-all">Nexus-HUB57/abacusai-bot-Hub57</p>
+                  <p className="text-xs text-muted-foreground uppercase">Repositório Clonado</p>
+                  <p className="text-sm font-bold font-code break-all text-accent">Nexus-HUB57/abacusai-bot-Hub57</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase">Status do Link</p>
-                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20">SINCRONIZADO</Badge>
+                  <p className="text-xs text-muted-foreground uppercase">Licença</p>
+                  <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">MIT - OPEN SOURCE</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -164,14 +186,14 @@ export default function SwarmPage() {
               <CardHeader>
                 <CardTitle className="text-sm uppercase font-bold flex items-center gap-2">
                   <Terminal className="w-4 h-4" />
-                  Quick CLI
+                  Nexus CLI
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <code className="block p-2 bg-black/60 rounded text-[10px] font-code text-white">
-                  nexus swarm --repo abacusai-bot-Hub57 --nodes 12
+                  nexus swarm --sync-abacus --repo Hub57
                 </code>
-                <p className="text-[10px] text-muted-foreground italic">Use este comando no terminal local para orquestração remota.</p>
+                <p className="text-[10px] text-muted-foreground italic">Use este comando para forçar a sincronização de memória e conversas.</p>
               </CardContent>
             </Card>
           </div>

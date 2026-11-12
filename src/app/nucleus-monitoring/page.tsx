@@ -52,8 +52,8 @@ export default function NucleusMonitoringPage() {
     setIsSyncingManus(true);
     
     toast({
-      title: "Iniciando Protocolo de Sincronização",
-      description: "Conectando ao cluster Manus AI para descoberta de núcleos...",
+      title: "Iniciando Protocolo AbacusAI",
+      description: "Sincronizando agentes e conectores com o código fonte...",
     });
 
     setTimeout(() => {
@@ -61,9 +61,9 @@ export default function NucleusMonitoringPage() {
       
       if (!nucleuses || nucleuses.length === 0) {
         const defaults = [
-          { name: "Manus Core Alpha", type: "primary", status: "online", syncProgress: 100 },
-          { name: "Manus Node Beta", type: "secondary", status: "syncing", syncProgress: 45 },
-          { name: "Manus Archive Delta", type: "tertiary", status: "offline", syncProgress: 0 }
+          { name: "Abacus Agent Alpha", type: "primary", status: "online", syncProgress: 100 },
+          { name: "Nexus Hub Beta", type: "secondary", status: "syncing", syncProgress: 45 },
+          { name: "Archive Delta", type: "tertiary", status: "offline", syncProgress: 0 }
         ];
 
         defaults.forEach(n => {
@@ -74,8 +74,8 @@ export default function NucleusMonitoringPage() {
             updatedAt: serverTimestamp(),
             lastHeartbeat: new Date().toISOString(),
             lastSyncAt: new Date().toISOString(),
-            description: "Núcleo sincronizado automaticamente via Manus Protocol.",
-            tags: ["manus", "auto-sync", n.type]
+            description: "Núcleo sincronizado via protocolo AbacusAI Bot.",
+            tags: ["abacusai", "auto-sync", n.type]
           });
         });
       } else {
@@ -93,7 +93,7 @@ export default function NucleusMonitoringPage() {
       setIsSyncingManus(false);
       toast({
         title: "Sincronização Concluída",
-        description: "Núcleos de rede atualizados com sucesso.",
+        description: "Malha de agentes AbacusAI pronta para execução.",
       });
     }, 2000);
   };
@@ -129,7 +129,7 @@ export default function NucleusMonitoringPage() {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Monitoramento de Núcleos</h1>
-            <p className="text-muted-foreground font-body">Rastreamento em tempo real de componentes da rede trinuclear.</p>
+            <p className="text-muted-foreground font-body">Rastreamento em tempo real de componentes da rede AbacusAI.</p>
           </div>
           <div className="flex gap-3">
             <Button 
@@ -139,7 +139,7 @@ export default function NucleusMonitoringPage() {
               className="border-accent text-accent hover:bg-accent/10 gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncingManus ? 'animate-spin' : ''}`} />
-              Sincronizar Manus
+              Sincronizar AbacusAI
             </Button>
             <Button onClick={() => setShowRegisterDialog(true)} className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4" />
@@ -173,7 +173,7 @@ export default function NucleusMonitoringPage() {
               <Activity className="w-5 h-5 text-accent" />
               Entidades de Rede
             </CardTitle>
-            <CardDescription className="font-body">Monitoramento de pulsação para nós registrados (Top 10).</CardDescription>
+            <CardDescription className="font-body">Monitoramento de telemetria para nós AbacusAI (Top 10).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -238,7 +238,7 @@ export default function NucleusMonitoringPage() {
               ) : (
                 <div className="text-center py-16 border-2 border-dashed rounded-xl bg-secondary/5">
                   <Database className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhum Núcleo Encontrado</h3>
+                  <h3 className="text-lg font-semibold mb-2">Nenhum Núcleo Abacus Encontrado</h3>
                   <p className="text-muted-foreground mb-6">Inicialize sua primeira unidade para começar o monitoramento.</p>
                   <Button
                     variant="outline"
