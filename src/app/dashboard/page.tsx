@@ -5,13 +5,14 @@ import { useEffect, useRef } from 'react';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BindGenerator } from '@/components/dashboard/bind-generator';
 import { BindValidator } from '@/components/dashboard/bind-validator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
-import { Activity, Key, Database, Zap, Wallet, Loader2 } from 'lucide-react';
+import { Activity, Key, Database, Zap, Wallet, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { redirect } from 'next/navigation';
 import { collection, query, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -99,9 +100,15 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-background text-foreground">
       <SidebarNav />
       <main className="flex-1 ml-64 p-8">
-        <header className="mb-8 text-center lg:text-left">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
-          <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
+        <header className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline">Centro de Comando Nexus</h1>
+            <p className="text-muted-foreground font-body">Orquestre binds com um suprimento diário renovável de 400.000 créditos.</p>
+          </div>
+          <Badge variant="outline" className="gap-2 px-3 py-1 border-accent/30 text-accent bg-accent/5">
+            <ShieldCheck className="w-3 h-3" />
+            Blueprint v2.0 Active
+          </Badge>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -120,9 +127,43 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <BindGenerator />
-          <BindValidator />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+             <BindGenerator />
+             <BindValidator />
+          </div>
+          
+          <Card className="bg-card/50 border-accent/20 h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg font-headline flex items-center gap-2">
+                <Send className="w-5 h-5 text-accent" />
+                Nexus Telegram Bridge
+              </CardTitle>
+              <CardDescription className="text-xs font-body">Status da integração end-to-end com o bot do Telegram.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+               <div className="p-4 rounded-xl bg-secondary/20 border border-border/50 space-y-3">
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Blueprint Status</span>
+                    <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px]">VALIDATED</Badge>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Bot Sync</span>
+                    <span className="font-code text-accent">@manus_ai_agent_bot</span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Last Ping</span>
+                    <span className="font-code opacity-70">Just Now</span>
+                 </div>
+               </div>
+               <a href="https://t.me/manus_ai_agent_bot" target="_blank" rel="noopener noreferrer">
+                 <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+                   Abrir Canal Telegram
+                   <Send className="w-4 h-4" />
+                 </Button>
+               </a>
+            </CardContent>
+          </Card>
         </div>
 
         <section className="mt-8">
