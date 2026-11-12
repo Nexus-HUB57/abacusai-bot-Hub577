@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -12,7 +13,8 @@ import {
   Cpu,
   LogOut,
   CreditCard,
-  Send
+  Send,
+  Boxes
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/firebase';
@@ -22,6 +24,7 @@ const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Códigos Bind', href: '/binds', icon: Key },
   { name: 'Monitoramento', href: '/nucleus-monitoring', icon: Database },
+  { name: 'Enxame (Swarm)', href: '/swarm', icon: Boxes },
   { name: 'Créditos', href: '/credits', icon: CreditCard },
   { name: 'Ferramentas', href: '/tools', icon: Wrench },
   { name: 'Histórico', href: '/bind-history', icon: History },
